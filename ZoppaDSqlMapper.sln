@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34408.163
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ZoppaDSqlMapper", "ZoppaDSqlMapper\ZoppaDSqlMapper.vbproj", "{220A78DD-500C-4364-9C0E-C7582DD924FF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DSqlSampleForSqliteCS", "DSqlSampleForSqliteCS\DSqlSampleForSqliteCS.csproj", "{F73D386F-58CC-49FA-971B-C84A5723EF0E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{220A78DD-500C-4364-9C0E-C7582DD924FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{220A78DD-500C-4364-9C0E-C7582DD924FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{220A78DD-500C-4364-9C0E-C7582DD924FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{220A78DD-500C-4364-9C0E-C7582DD924FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F73D386F-58CC-49FA-971B-C84A5723EF0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F73D386F-58CC-49FA-971B-C84A5723EF0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F73D386F-58CC-49FA-971B-C84A5723EF0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F73D386F-58CC-49FA-971B-C84A5723EF0E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9437E393-E16C-49B6-8A09-564AB0B70BE4}
+	EndGlobalSection
+EndGlobal

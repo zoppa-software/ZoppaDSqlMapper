@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>ZoppaDSql</RootNamespace>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ZoppaLegacyFiles" Version="1.0.0" />
+    <PackageReference Include="ZoppaLoggingExtensions" Version="0.9.0" />
+  </ItemGroup>
+
+</Project>

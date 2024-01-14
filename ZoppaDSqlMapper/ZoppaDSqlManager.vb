@@ -4,14 +4,12 @@ Option Explicit On
 Imports System.Data
 Imports System.Dynamic
 Imports System.Reflection
-Imports System.Runtime
 Imports System.Runtime.CompilerServices
 Imports System.Text
-Imports System.Threading
-Imports FxResources.Microsoft.Extensions.Logging
 Imports Microsoft.Extensions.DependencyInjection
 Imports Microsoft.Extensions.Logging
-Imports ZoppaDSql.ZoppaDSqlManager
+Imports ZoppaDSqlCompiler
+Imports ZoppaDSqlCompiler.Tokens
 Imports ZoppaLegacyFiles.Csv
 Imports ZoppaLoggingExtensions
 
@@ -76,16 +74,17 @@ Public Module ZoppaDSqlManager
         )
 
         _logFactory = loggerFactory
+        ZoppaDSqlCompiler.SetZoppaDSqlLogFactory(_logFactory)
 
         Using scope = _logger.Value?.BeginScope("log setting")
-            _logger.Value?.LogInformation($"output log file : {defaultLogFile}")
-            _logger.Value?.LogInformation($"is console out : {isConsole}")
-            _logger.Value?.LogInformation($"encode name : {encodeName}")
-            _logger.Value?.LogInformation($"max log file size : {maxLogSize}")
-            _logger.Value?.LogInformation($"log generation : {logGeneration}")
-            _logger.Value?.LogInformation($"minimum log level : {minimumLogLevel}")
-            _logger.Value?.LogInformation($"switch by day : {switchByDay}")
-            _logger.Value?.LogInformation($"output cache limit : {cacheLimit}")
+            _logger.Value?.LogInformation("output log file : {defaultLogFile}", defaultLogFile)
+            _logger.Value?.LogInformation("is console out : {isConsole}", isConsole)
+            _logger.Value?.LogInformation("encode name : {encodeName}", encodeName)
+            _logger.Value?.LogInformation("max log file size : {maxLogSize}", maxLogSize)
+            _logger.Value?.LogInformation("log generation : {logGeneration}", logGeneration)
+            _logger.Value?.LogInformation("minimum log level : {minimumLogLevel}", minimumLogLevel)
+            _logger.Value?.LogInformation("switch by day : {switchByDay}", switchByDay)
+            _logger.Value?.LogInformation("output cache limit : {cacheLimit}", cacheLimit)
         End Using
 
         Return loggerFactory
@@ -96,10 +95,14 @@ Public Module ZoppaDSqlManager
     ''' <returns>サービスプロバイダー。</returns>
     <Extension>
     Public Function SetZoppaDSqlLogProvider(provider As IServiceProvider) As IServiceProvider
-        _provider = provider
-        Using scope = _logger.Value?.BeginScope("log setting")
-            _logger.Value?.LogInformation("use other log by service provider")
-        End Using
+        If _provider Is Nothing Then
+            _provider = provider
+            ZoppaDSqlCompiler.SetZoppaDSqlLogProvider(_provider)
+
+            Using scope = _logger.Value?.BeginScope("log setting")
+                _logger.Value?.LogInformation("use other log by service provider")
+            End Using
+        End If
         Return _provider
     End Function
 
@@ -108,45 +111,20 @@ Public Module ZoppaDSqlManager
     ''' <returns>ログファクトリ。</returns>
     <Extension>
     Public Function SetZoppaDSqlLogFactory(factory As ILoggerFactory) As ILoggerFactory
-        _logFactory = factory
-        Using scope = _logger.Value?.BeginScope("log setting")
-            _logger.Value?.LogInformation("use other log by logger factory")
-        End Using
+        If _logFactory Is Nothing Then
+            _logFactory = factory
+            ZoppaDSqlCompiler.SetZoppaDSqlLogFactory(_logFactory)
+
+            Using scope = _logger.Value?.BeginScope("log setting")
+                _logger.Value?.LogInformation("use other log by logger factory")
+            End Using
+        End If
         Return _logFactory
     End Function
 
 #End Region
 
 #Region "parameters"
-
-    ''' <summary>パラメータをログ出力します。</summary>
-    ''' <param name="parameter">パラメータ。</param>
-    Private Sub LoggingParameter(parameter As Object)
-        If parameter IsNot Nothing Then
-            _logger.Value?.LogDebug("Parameters")
-            Dim props = parameter.GetType().GetProperties()
-            For Each prop In props
-                Dim v = prop.GetValue(parameter)
-                _logger.Value?.LogDebug($"・{prop.Name}={GetValueString(v)} ({prop.PropertyType})")
-            Next
-        End If
-    End Sub
-
-    ''' <summary>オブジェクトの文字列表現を取得します。</summary>
-    ''' <param name="value">オブジェクト。</param>
-    ''' <returns>文字列表現。</returns>
-    Private Function GetValueString(value As Object) As String
-        If TypeOf value Is IEnumerable Then
-            Dim buf As New StringBuilder()
-            For Each v In CType(value, IEnumerable)
-                If buf.Length > 0 Then buf.Append(", ")
-                buf.Append(v)
-            Next
-            Return buf.ToString()
-        Else
-            Return If(value?.ToString(), "[null]")
-        End If
-    End Function
 
     ''' <summary>SQLパラメータ定義を設定します。</summary>
     ''' <param name="command">SQLコマンド。</param>
@@ -191,7 +169,7 @@ Public Module ZoppaDSqlManager
                     Else
                         prm.Direction = If(prop.CanWrite, ParameterDirection.Output, ParameterDirection.Input)
                     End If
-                    _logger.Value?.LogTrace($"・Name = {prm.ParameterName} Direction = {[Enum].GetName(GetType(ParameterDirection), prm.Direction)}")
+                    _logger.Value?.LogDebug("・Name = {} Direction = {}", prm.ParameterName, [Enum].GetName(GetType(ParameterDirection), prm.Direction))
 
                     prms.Add(prm)
                 End If
@@ -302,7 +280,7 @@ Public Module ZoppaDSqlManager
 
             ' 変数に設定
             If command.Parameters.Contains(propName) Then
-                _logger.Value?.LogTrace($"・{propName}={propVal}")
+                _logger.Value?.LogDebug("・{propName}={propVal}", propName, propVal)
                 CType(command.Parameters(propName), IDbDataParameter).Value = propVal
             End If
         Next
@@ -319,9 +297,31 @@ Public Module ZoppaDSqlManager
             Case PrefixType.Colon
                 ans = ":"
         End Select
-        _logger.Value?.LogTrace($"Variant format : '{ans}'")
+        _logger.Value?.LogDebug("Variant format : '{ans}'", ans)
 
         Return ans & "{0}"
+    End Function
+
+#End Region
+
+#Region ""
+
+    ''' <summary>動的SQLをコンパイルします。</summary>
+    ''' <param name="sqlQuery">動的SQL。</param>
+    ''' <param name="parameter">動的SQL、クエリパラメータ用の情報。</param>
+    ''' <returns>コンパイル結果。</returns>
+    <Extension()>
+    Public Function Compile(sqlQuery As String, Optional parameter As Object = Nothing) As String
+        Return ZoppaDSqlCompiler.Compile(sqlQuery, parameter)
+    End Function
+
+    ''' <summary>引数の文字列を評価して値を取得します。</summary>
+    ''' <param name="expression">評価する文字列。</param>
+    ''' <param name="parameter">環境値。</param>
+    ''' <returns>評価結果。</returns>
+    <Extension()>
+    Public Function Executes(expression As String, Optional parameter As Object = Nothing) As IToken
+        Return ZoppaDSqlCompiler.Executes(expression, parameter)
     End Function
 
 #End Region
@@ -414,10 +414,10 @@ Public Module ZoppaDSqlManager
                                          sqlParameter As IEnumerable(Of Object)) As List(Of T)
         Using scope = _logger.Value?.BeginScope(NameOf(ExecuteRecords))
             Try
-                _logger.Value?.LogDebug($"Execute SQL : {query}")
-                _logger.Value?.LogDebug($"Use Transaction : {setting.Transaction IsNot Nothing}")
-                _logger.Value?.LogDebug($"Use command type : {setting.CommandType}")
-                _logger.Value?.LogDebug($"Timeout seconds : {setting.TimeOutSecond}")
+                _logger.Value?.LogDebug("Execute SQL : {query}", query)
+                _logger.Value?.LogDebug("Use Transaction : {setting.Transaction IsNot Nothing}", setting.Transaction IsNot Nothing)
+                _logger.Value?.LogDebug("Use command type : {setting.CommandType}", setting.CommandType)
+                _logger.Value?.LogDebug("Timeout seconds : {setting.TimeOutSecond}", setting.TimeOutSecond)
                 Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
 
                 Dim recoreds As New List(Of T)()
@@ -433,7 +433,7 @@ Public Module ZoppaDSqlManager
                     ' SQLクエリを設定
                     ' TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
                     command.CommandText = query
-                    _logger.Value?.LogTrace($"Answer SQL : {command.CommandText}")
+                    _logger.Value?.LogTrace("Answer SQL : {command.CommandText}", command.CommandText)
 
                     ' SQLパラメータが空なら動的パラメータを展開
                     Dim sqlPrms = sqlParameter.ToArray()
@@ -475,8 +475,7 @@ Public Module ZoppaDSqlManager
                 Return recoreds
 
             Catch ex As Exception
-                _logger.Value?.LogError(ex.Message)
-                _logger.Value?.LogError(ex.StackTrace)
+                _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
                 Throw
             End Try
         End Using
@@ -545,7 +544,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteRecords(Of T)(setting As Settings,
                                          query As String,
                                          dynamicParameter As Object) As List(Of T)
-        Return ExecuteRecords(Of T)(setting, query, dynamicParameter, New Object() {})
+        Return ExecuteRecords(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -560,7 +559,7 @@ Public Module ZoppaDSqlManager
                                                    dynamicParameter As Object) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(setting, query, dynamicParameter, New Object() {})
+                Return ExecuteRecords(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -575,7 +574,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteRecords(Of T)(connect As IDbConnection,
                                          query As String,
                                          dynamicParameter As Object) As List(Of T)
-        Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, New Object() {})
+        Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -590,7 +589,7 @@ Public Module ZoppaDSqlManager
                                                    dynamicParameter As Object) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, New Object() {})
+                Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -663,7 +662,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteRecords(Of T)(setting As Settings,
                                          query As String) As List(Of T)
-        Return ExecuteRecords(Of T)(setting, query, Nothing, New Object() {})
+        Return ExecuteRecords(Of T)(setting, query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -676,7 +675,7 @@ Public Module ZoppaDSqlManager
                                                    query As String) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(setting, query, Nothing, New Object() {})
+                Return ExecuteRecords(Of T)(setting, query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -690,7 +689,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteRecords(Of T)(connect As IDbConnection,
                                          query As String) As List(Of T)
-        Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, New Object() {})
+        Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -704,7 +703,7 @@ Public Module ZoppaDSqlManager
                                                    query As String) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, New Object() {})
+                Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -729,10 +728,10 @@ Public Module ZoppaDSqlManager
                                          createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
         Using scope = _logger.Value?.BeginScope(NameOf(ExecuteRecords))
             Try
-                _logger.Value?.LogDebug($"Execute SQL : {query}")
-                _logger.Value?.LogDebug($"Use Transaction : {setting.Transaction IsNot Nothing}")
-                _logger.Value?.LogDebug($"Use command type : {setting.CommandType}")
-                _logger.Value?.LogDebug($"Timeout seconds : {setting.TimeOutSecond}")
+                _logger.Value?.LogDebug("Execute SQL : {query}", query)
+                _logger.Value?.LogDebug("Use Transaction : {setting.Transaction IsNot Nothing}", setting.Transaction IsNot Nothing)
+                _logger.Value?.LogDebug("Use command type : {setting.CommandType}", setting.CommandType)
+                _logger.Value?.LogDebug("Timeout seconds : {setting.TimeOutSecond}", setting.TimeOutSecond)
                 Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
 
                 Dim recoreds As New List(Of T)()
@@ -749,7 +748,7 @@ Public Module ZoppaDSqlManager
                     ' SQLクエリを設定
                     ' TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
                     command.CommandText = query
-                    _logger.Value?.LogTrace($"Answer SQL : {command.CommandText}")
+                    _logger.Value?.LogTrace("Answer SQL : {command.CommandText}", command.CommandText)
 
                     ' SQLパラメータが空なら動的パラメータを展開
                     Dim sqlPrms = sqlParameter.ToArray()
@@ -787,8 +786,7 @@ Public Module ZoppaDSqlManager
                 Return recoreds
 
             Catch ex As Exception
-                _logger.Value?.LogError(ex.Message)
-                _logger.Value?.LogError(ex.StackTrace)
+                _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
                 Throw
             End Try
         End Using
@@ -865,7 +863,7 @@ Public Module ZoppaDSqlManager
                                          query As String,
                                          dynamicParameter As Object,
                                          createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(setting, query, dynamicParameter, New Object() {}, createrMethod)
+        Return ExecuteRecords(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -882,7 +880,7 @@ Public Module ZoppaDSqlManager
                                                    createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(setting, query, dynamicParameter, New Object() {}, createrMethod)
+                Return ExecuteRecords(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
             End Function
         )
     End Function
@@ -899,7 +897,7 @@ Public Module ZoppaDSqlManager
                                          query As String,
                                          dynamicParameter As Object,
                                          createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, New Object() {}, createrMethod)
+        Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -916,7 +914,7 @@ Public Module ZoppaDSqlManager
                                                    createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, New Object() {}, createrMethod)
+                Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
             End Function
         )
     End Function
@@ -1003,7 +1001,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteRecords(Of T)(setting As Settings,
                                          query As String,
                                          createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(setting, query, Nothing, New Object() {}, createrMethod)
+        Return ExecuteRecords(Of T)(setting, query, Nothing, Array.Empty(Of Object)(), createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -1018,7 +1016,7 @@ Public Module ZoppaDSqlManager
                                                    createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(setting, query, Nothing, New Object() {}, createrMethod)
+                Return ExecuteRecords(Of T)(setting, query, Nothing, Array.Empty(Of Object)(), createrMethod)
             End Function
         )
     End Function
@@ -1033,7 +1031,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteRecords(Of T)(connect As IDbConnection,
                                          query As String,
                                          createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, New Object() {}, createrMethod)
+        Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)(), createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -1048,7 +1046,7 @@ Public Module ZoppaDSqlManager
                                                    createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, New Object() {}, createrMethod)
+                Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)(), createrMethod)
             End Function
         )
     End Function
@@ -1068,72 +1066,72 @@ Public Module ZoppaDSqlManager
                                  query As String,
                                  dynamicParameter As Object,
                                  sqlParameter As IEnumerable(Of Object)) As DataTable
-        Try
-            _logger.Value?.LogDebug($"Execute SQL : {query}")
-            _logger.Value?.LogDebug($"Use Transaction : {setting.Transaction IsNot Nothing}")
-            _logger.Value?.LogDebug($"Use command type : {setting.CommandType}")
-            _logger.Value?.LogDebug($"Timeout seconds : {setting.TimeOutSecond}")
-            Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
+        Using scope = _logger.Value?.BeginScope(NameOf(ExecuteTable))
+            Try
+                _logger.Value?.LogDebug("Execute SQL : {query}", query)
+                _logger.Value?.LogDebug("Use Transaction : {setting.Transaction IsNot Nothing}", setting.Transaction IsNot Nothing)
+                _logger.Value?.LogDebug("Use command type : {setting.CommandType}", setting.CommandType)
+                _logger.Value?.LogDebug("Timeout seconds : {setting.TimeOutSecond}", setting.TimeOutSecond)
+                Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
 
-            Dim res As New DataTable(query)
-            Using command = setting.DbConnection.CreateCommand()
-                ' タイムアウト秒を設定
-                command.CommandTimeout = setting.TimeOutSecond
+                Dim res As New DataTable(query)
+                Using command = setting.DbConnection.CreateCommand()
+                    ' タイムアウト秒を設定
+                    command.CommandTimeout = setting.TimeOutSecond
 
-                ' トランザクションを設定
-                If setting.Transaction IsNot Nothing Then
-                    command.Transaction = setting.Transaction
-                End If
-
-                ' SQLクエリを設定
-                'TODO:command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
-                command.CommandText = query
-                _logger.Value?.LogTrace($"Answer SQL : {command.CommandText}")
-
-                ' SQLパラメータが空なら動的パラメータを展開
-                Dim sqlPrms = sqlParameter.ToArray()
-                If sqlPrms.Length = 0 Then
-                    sqlPrms = New Object() {dynamicParameter}
-                End If
-
-                ' SQLコマンドタイプを設定
-                command.CommandType = setting.CommandType
-
-                ' パラメータの定義を設定
-                Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat, setting.ParameterChecker, setting.PropertyNames)
-
-                For Each prm In sqlPrms
-                    ' パラメータ変数に値を設定
-                    If prm IsNot Nothing Then
-                        SetParameter(command, prm, props, varFormat)
+                    ' トランザクションを設定
+                    If setting.Transaction IsNot Nothing Then
+                        command.Transaction = setting.Transaction
                     End If
 
-                    Using reader = command.ExecuteReader()
-                        Dim tbl = reader.GetSchemaTable()
-                        For Each r As DataRow In tbl.Rows
-                            Dim clm = New DataColumn(r("ColumnName").ToString(), CType(r("DataType"), Type))
-                            res.Columns.Add(clm)
-                        Next
+                    ' SQLクエリを設定
+                    'TODO:command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
+                    command.CommandText = query
+                    _logger.Value?.LogTrace("Answer SQL : {command.CommandText}", command.CommandText)
 
-                        ' 一行取得して行を追加
-                        Do While reader.Read()
-                            Dim r = res.NewRow()
-                            Dim fields = New Object(reader.FieldCount - 1) {}
-                            reader.GetValues(fields)
-                            ChangeDBNull(fields)
-                            r.ItemArray = fields
-                            res.Rows.Add(r)
-                        Loop
-                    End Using
-                Next
-            End Using
-            Return res
+                    ' SQLパラメータが空なら動的パラメータを展開
+                    Dim sqlPrms = sqlParameter.ToArray()
+                    If sqlPrms.Length = 0 Then
+                        sqlPrms = New Object() {dynamicParameter}
+                    End If
 
-        Catch ex As Exception
-            _logger.Value?.LogError(ex.Message)
-            _logger.Value?.LogError(ex.StackTrace)
-            Throw
-        End Try
+                    ' SQLコマンドタイプを設定
+                    command.CommandType = setting.CommandType
+
+                    ' パラメータの定義を設定
+                    Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat, setting.ParameterChecker, setting.PropertyNames)
+
+                    For Each prm In sqlPrms
+                        ' パラメータ変数に値を設定
+                        If prm IsNot Nothing Then
+                            SetParameter(command, prm, props, varFormat)
+                        End If
+
+                        Using reader = command.ExecuteReader()
+                            Dim tbl = reader.GetSchemaTable()
+                            For Each r As DataRow In tbl.Rows
+                                Dim clm = New DataColumn(r("ColumnName").ToString(), CType(r("DataType"), Type))
+                                res.Columns.Add(clm)
+                            Next
+
+                            ' 一行取得して行を追加
+                            Do While reader.Read()
+                                Dim r = res.NewRow()
+                                Dim fields = New Object(reader.FieldCount - 1) {}
+                                reader.GetValues(fields)
+                                r.ItemArray = fields
+                                res.Rows.Add(r)
+                            Loop
+                        End Using
+                    Next
+                End Using
+                Return res
+
+            Catch ex As Exception
+                _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
+                Throw
+            End Try
+        End Using
     End Function
 
     ''' <summary>SQLクエリを実行し、データテーブルを取得します（非同期）</summary>
@@ -1198,7 +1196,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteTable(setting As Settings,
                                  query As String,
                                  dynamicParameter As Object) As DataTable
-        Return ExecuteTable(setting, query, dynamicParameter, New Object() {})
+        Return ExecuteTable(setting, query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、データテーブルを取得します（非同期）</summary>
@@ -1213,7 +1211,7 @@ Public Module ZoppaDSqlManager
                                            dynamicParameter As Object) As Task(Of DataTable)
         Return Await Task.Run(
             Function()
-                Return ExecuteTable(setting, query, dynamicParameter, New Object() {})
+                Return ExecuteTable(setting, query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1228,7 +1226,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteTable(connect As IDbConnection,
                                  query As String,
                                  dynamicParameter As Object) As DataTable
-        Return ExecuteTable(New Settings(connect), query, dynamicParameter, New Object() {})
+        Return ExecuteTable(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、データテーブルを取得します（非同期）</summary>
@@ -1243,7 +1241,7 @@ Public Module ZoppaDSqlManager
                                            dynamicParameter As Object) As Task(Of DataTable)
         Return Await Task.Run(
             Function()
-                Return ExecuteTable(New Settings(connect), query, dynamicParameter, New Object() {})
+                Return ExecuteTable(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1314,7 +1312,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteTable(setting As Settings,
                                  query As String) As DataTable
-        Return ExecuteTable(setting, query, Nothing, New Object() {})
+        Return ExecuteTable(setting, query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、データテーブルを取得します（非同期）</summary>
@@ -1327,7 +1325,7 @@ Public Module ZoppaDSqlManager
                                            query As String) As Task(Of DataTable)
         Return Await Task.Run(
             Function()
-                Return ExecuteTable(setting, query, Nothing, New Object() {})
+                Return ExecuteTable(setting, query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1340,7 +1338,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteTable(connect As IDbConnection,
                                  query As String) As DataTable
-        Return ExecuteTable(New Settings(connect), query, Nothing, New Object() {})
+        Return ExecuteTable(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、データテーブルを取得します（非同期）</summary>
@@ -1353,7 +1351,7 @@ Public Module ZoppaDSqlManager
                                            query As String) As Task(Of DataTable)
         Return Await Task.Run(
             Function()
-                Return ExecuteTable(New Settings(connect), query, Nothing, New Object() {})
+                Return ExecuteTable(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1396,74 +1394,75 @@ Public Module ZoppaDSqlManager
     ''' <returns>実行結果。</returns>
     <Extension()>
     Public Function ExecuteObject(setting As Settings,
-                                 query As String,
-                                 dynamicParameter As Object,
-                                 sqlParameter As IEnumerable(Of Object)) As List(Of DynamicObject)
-        Try
-            _logger.Value?.LogDebug($"Execute SQL : {query}")
-            _logger.Value?.LogDebug($"Use Transaction : {setting.Transaction IsNot Nothing}")
-            _logger.Value?.LogDebug($"Use command type : {setting.CommandType}")
-            _logger.Value?.LogDebug($"Timeout seconds : {setting.TimeOutSecond}")
-            Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
+                                  query As String,
+                                  dynamicParameter As Object,
+                                  sqlParameter As IEnumerable(Of Object)) As List(Of DynamicObject)
+        Using scope = _logger.Value?.BeginScope(NameOf(ExecuteObject))
+            Try
+                _logger.Value?.LogDebug("Execute SQL : {query}", query)
+                _logger.Value?.LogDebug("Use Transaction : {setting.Transaction IsNot Nothing}", setting.Transaction IsNot Nothing)
+                _logger.Value?.LogDebug("Use command type : {setting.CommandType}", setting.CommandType)
+                _logger.Value?.LogDebug("Timeout seconds : {setting.TimeOutSecond}", setting.TimeOutSecond)
+                Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
 
-            Dim res As New List(Of DynamicObject)()
-            Using command = setting.DbConnection.CreateCommand()
-                ' タイムアウト秒を設定
-                command.CommandTimeout = setting.TimeOutSecond
+                Dim res As New List(Of DynamicObject)()
+                Using command = setting.DbConnection.CreateCommand()
+                    ' タイムアウト秒を設定
+                    command.CommandTimeout = setting.TimeOutSecond
 
-                ' トランザクションを設定
-                If setting.Transaction IsNot Nothing Then
-                    command.Transaction = setting.Transaction
-                End If
-
-                ' SQLクエリを設定
-                ' TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
-                command.CommandText = query
-                _logger.Value?.LogTrace($"Answer SQL : {command.CommandText}")
-
-                ' SQLパラメータが空なら動的パラメータを展開
-                Dim sqlPrms = sqlParameter.ToArray()
-                If sqlPrms.Length = 0 Then
-                    sqlPrms = New Object() {dynamicParameter}
-                End If
-
-                ' SQLコマンドタイプを設定
-                command.CommandType = setting.CommandType
-
-                ' パラメータの定義を設定
-                Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat,
-                                                  setting.ParameterChecker, setting.PropertyNames)
-
-                For Each prm In sqlPrms
-                    ' パラメータ変数に値を設定
-                    If prm IsNot Nothing Then
-                        SetParameter(command, prm, props, varFormat)
+                    ' トランザクションを設定
+                    If setting.Transaction IsNot Nothing Then
+                        command.Transaction = setting.Transaction
                     End If
 
-                    Using reader = command.ExecuteReader()
-                        Dim tbl = reader.GetSchemaTable()
-                        Dim clms As New List(Of String)()
-                        For Each r As DataRow In tbl.Rows
-                            clms.Add(r("ColumnName").ToString())
-                        Next
+                    ' SQLクエリを設定
+                    ' TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
+                    command.CommandText = query
+                    _logger.Value?.LogTrace("Answer SQL : {command.CommandText}", command.CommandText)
 
-                        ' 一行取得して行を追加
-                        Dim fields = New Object(reader.FieldCount - 1) {}
-                        Do While reader.Read()
-                            reader.GetValues(fields)
-                            ChangeDBNull(fields)
-                            res.Add(New DynamicRecord(clms, fields))
-                        Loop
-                    End Using
-                Next
-            End Using
-            Return res
+                    ' SQLパラメータが空なら動的パラメータを展開
+                    Dim sqlPrms = sqlParameter.ToArray()
+                    If sqlPrms.Length = 0 Then
+                        sqlPrms = New Object() {dynamicParameter}
+                    End If
 
-        Catch ex As Exception
-            _logger.Value?.LogError(ex.Message)
-            _logger.Value?.LogError(ex.StackTrace)
-            Throw
-        End Try
+                    ' SQLコマンドタイプを設定
+                    command.CommandType = setting.CommandType
+
+                    ' パラメータの定義を設定
+                    Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat,
+                                                      setting.ParameterChecker, setting.PropertyNames)
+
+                    For Each prm In sqlPrms
+                        ' パラメータ変数に値を設定
+                        If prm IsNot Nothing Then
+                            SetParameter(command, prm, props, varFormat)
+                        End If
+
+                        Using reader = command.ExecuteReader()
+                            Dim tbl = reader.GetSchemaTable()
+                            Dim clms As New List(Of String)()
+                            For Each r As DataRow In tbl.Rows
+                                clms.Add(r("ColumnName").ToString())
+                            Next
+
+                            ' 一行取得して行を追加
+                            Dim fields = New Object(reader.FieldCount - 1) {}
+                            Do While reader.Read()
+                                reader.GetValues(fields)
+                                ChangeDBNull(fields)
+                                res.Add(New DynamicRecord(clms, fields))
+                            Loop
+                        End Using
+                    Next
+                End Using
+                Return res
+
+            Catch ex As Exception
+                _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
+                Throw
+            End Try
+        End Using
     End Function
 
     ''' <summary>SQLクエリを実行し、ダイナミックオブジェクトを取得します（非同期）</summary>
@@ -1528,7 +1527,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteObject(setting As Settings,
                                  query As String,
                                  dynamicParameter As Object) As List(Of DynamicObject)
-        Return ExecuteObject(setting, query, dynamicParameter, New Object() {})
+        Return ExecuteObject(setting, query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、ダイナミックオブジェクトを取得します（非同期）</summary>
@@ -1543,7 +1542,7 @@ Public Module ZoppaDSqlManager
                                             dynamicParameter As Object) As Task(Of List(Of DynamicObject))
         Return Await Task.Run(
             Function()
-                Return ExecuteObject(setting, query, dynamicParameter, New Object() {})
+                Return ExecuteObject(setting, query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1558,7 +1557,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteObject(connect As IDbConnection,
                                   query As String,
                                   dynamicParameter As Object) As List(Of DynamicObject)
-        Return ExecuteObject(New Settings(connect), query, dynamicParameter, New Object() {})
+        Return ExecuteObject(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、ダイナミックオブジェクトを取得します（非同期）</summary>
@@ -1573,7 +1572,7 @@ Public Module ZoppaDSqlManager
                                             dynamicParameter As Object) As Task(Of List(Of DynamicObject))
         Return Await Task.Run(
             Function()
-                Return ExecuteObject(New Settings(connect), query, dynamicParameter, New Object() {})
+                Return ExecuteObject(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1644,7 +1643,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteObject(setting As Settings,
                                   query As String) As List(Of DynamicObject)
-        Return ExecuteObject(setting, query, Nothing, New Object() {})
+        Return ExecuteObject(setting, query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、ダイナミックオブジェクトを取得します（非同期）</summary>
@@ -1657,7 +1656,7 @@ Public Module ZoppaDSqlManager
                                             query As String) As Task(Of List(Of DynamicObject))
         Return Await Task.Run(
             Function()
-                Return ExecuteObject(setting, query, Nothing, New Object() {})
+                Return ExecuteObject(setting, query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1670,7 +1669,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteObject(connect As IDbConnection,
                                   query As String) As List(Of DynamicObject)
-        Return ExecuteObject(New Settings(connect), query, Nothing, New Object() {})
+        Return ExecuteObject(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、ダイナミックオブジェクトを取得します（非同期）</summary>
@@ -1683,7 +1682,7 @@ Public Module ZoppaDSqlManager
                                             query As String) As Task(Of List(Of DynamicObject))
         Return Await Task.Run(
             Function()
-                Return ExecuteObject(New Settings(connect), query, Nothing, New Object() {})
+                Return ExecuteObject(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1704,65 +1703,66 @@ Public Module ZoppaDSqlManager
                                   query As String,
                                   dynamicParameter As Object,
                                   sqlParameter As IEnumerable(Of Object)) As List(Of Object())
-        Try
-            _logger.Value?.LogDebug($"Execute SQL : {query}")
-            _logger.Value?.LogDebug($"Use Transaction : {setting.Transaction IsNot Nothing}")
-            _logger.Value?.LogDebug($"Use command type : {setting.CommandType}")
-            _logger.Value?.LogDebug($"Timeout seconds : {setting.TimeOutSecond}")
-            Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
+        Using scope = _logger.Value?.BeginScope(NameOf(ExecuteArrays))
+            Try
+                _logger.Value?.LogDebug("Execute SQL : {query}", query)
+                _logger.Value?.LogDebug("Use Transaction : {setting.Transaction IsNot Nothing}", setting.Transaction IsNot Nothing)
+                _logger.Value?.LogDebug("Use command type : {setting.CommandType}", setting.CommandType)
+                _logger.Value?.LogDebug("Timeout seconds : {setting.TimeOutSecond}", setting.TimeOutSecond)
+                Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
 
-            Dim recoreds As New List(Of Object())()
-            Using command = setting.DbConnection.CreateCommand()
-                ' タイムアウト秒を設定
-                command.CommandTimeout = setting.TimeOutSecond
+                Dim recoreds As New List(Of Object())()
+                Using command = setting.DbConnection.CreateCommand()
+                    ' タイムアウト秒を設定
+                    command.CommandTimeout = setting.TimeOutSecond
 
-                ' トランザクションを設定
-                If setting.Transaction IsNot Nothing Then
-                    command.Transaction = setting.Transaction
-                End If
-
-                ' SQLクエリを設定
-                'TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
-                command.CommandText = query
-                _logger.Value?.LogTrace($"Answer SQL : {command.CommandText}")
-
-                ' SQLパラメータが空なら動的パラメータを展開
-                Dim sqlPrms = sqlParameter.ToArray()
-                If sqlPrms.Length = 0 Then
-                    sqlPrms = New Object() {dynamicParameter}
-                End If
-
-                ' SQLコマンドタイプを設定
-                command.CommandType = setting.CommandType
-
-                ' パラメータの定義を設定
-                Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat, setting.ParameterChecker, setting.PropertyNames)
-
-                For Each prm In sqlPrms
-                    ' パラメータ変数に値を設定
-                    If prm IsNot Nothing Then
-                        SetParameter(command, prm, props, varFormat)
+                    ' トランザクションを設定
+                    If setting.Transaction IsNot Nothing Then
+                        command.Transaction = setting.Transaction
                     End If
 
-                    Using reader = command.ExecuteReader()
-                        ' 一行取得してインスタンスを生成
-                        Do While reader.Read()
-                            Dim fields = New Object(reader.FieldCount - 1) {}
-                            If reader.GetValues(fields) >= reader.FieldCount Then
-                                ChangeDBNull(fields)
-                                recoreds.Add(fields)
-                            End If
-                        Loop
-                    End Using
-                Next
-            End Using
-            Return recoreds
+                    ' SQLクエリを設定
+                    'TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
+                    command.CommandText = query
+                    _logger.Value?.LogTrace("Answer SQL : {command.CommandText}", command.CommandText)
 
-        Catch ex As Exception
-            _logger.Value?.LogError(ex.Message)
-            _logger.Value?.LogError(ex.StackTrace)
-            Throw
-        End Try
+                    ' SQLパラメータが空なら動的パラメータを展開
+                    Dim sqlPrms = sqlParameter.ToArray()
+                    If sqlPrms.Length = 0 Then
+                        sqlPrms = New Object() {dynamicParameter}
+                    End If
+
+                    ' SQLコマンドタイプを設定
+                    command.CommandType = setting.CommandType
+
+                    ' パラメータの定義を設定
+                    Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat, setting.ParameterChecker, setting.PropertyNames)
+
+                    For Each prm In sqlPrms
+                        ' パラメータ変数に値を設定
+                        If prm IsNot Nothing Then
+                            SetParameter(command, prm, props, varFormat)
+                        End If
+
+                        Using reader = command.ExecuteReader()
+                            ' 一行取得してインスタンスを生成
+                            Do While reader.Read()
+                                Dim fields = New Object(reader.FieldCount - 1) {}
+                                If reader.GetValues(fields) >= reader.FieldCount Then
+                                    ChangeDBNull(fields)
+                                    recoreds.Add(fields)
+                                End If
+                            Loop
+                        End Using
+                    Next
+                End Using
+                Return recoreds
+
+            Catch ex As Exception
+                _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
+                Throw
+            End Try
+        End Using
     End Function
 
     ''' <summary>SQLクエリを実行し、オブジェクト配列のリストを取得します（非同期）</summary>
@@ -1828,7 +1828,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteArrays(setting As Settings,
                                   query As String,
                                   dynamicParameter As Object) As List(Of Object())
-        Return ExecuteArrays(setting, query, dynamicParameter, New Object() {})
+        Return ExecuteArrays(setting, query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、オブジェクト配列のリストを取得します（非同期）</summary>
@@ -1843,7 +1843,7 @@ Public Module ZoppaDSqlManager
                                             dynamicParameter As Object) As Task(Of List(Of Object()))
         Return Await Task.Run(
             Function()
-                Return ExecuteArrays(setting, query, dynamicParameter, New Object() {})
+                Return ExecuteArrays(setting, query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1858,7 +1858,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteArrays(connect As IDbConnection,
                                   query As String,
                                   dynamicParameter As Object) As List(Of Object())
-        Return ExecuteArrays(New Settings(connect), query, dynamicParameter, New Object() {})
+        Return ExecuteArrays(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、オブジェクト配列のリストを取得します（非同期）</summary>
@@ -1873,7 +1873,7 @@ Public Module ZoppaDSqlManager
                                             dynamicParameter As Object) As Task(Of List(Of Object()))
         Return Await Task.Run(
             Function()
-                Return ExecuteArrays(New Settings(connect), query, dynamicParameter, New Object() {})
+                Return ExecuteArrays(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1946,7 +1946,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteArrays(setting As Settings,
                                   query As String) As List(Of Object())
-        Return ExecuteArrays(setting, query, Nothing, New Object() {})
+        Return ExecuteArrays(setting, query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、オブジェクト配列のリストを取得します（非同期）</summary>
@@ -1959,7 +1959,7 @@ Public Module ZoppaDSqlManager
                                             query As String) As Task(Of List(Of Object()))
         Return Await Task.Run(
             Function()
-                Return ExecuteArrays(setting, query, Nothing, New Object() {})
+                Return ExecuteArrays(setting, query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -1972,7 +1972,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteArrays(connect As IDbConnection,
                                   query As String) As List(Of Object())
-        Return ExecuteArrays(New Settings(connect), query, Nothing, New Object() {})
+        Return ExecuteArrays(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、オブジェクト配列のリストを取得します（非同期）</summary>
@@ -1985,7 +1985,7 @@ Public Module ZoppaDSqlManager
                                             query As String) As Task(Of List(Of Object()))
         Return Await Task.Run(
             Function()
-                Return ExecuteArrays(New Settings(connect), query, Nothing, New Object() {})
+                Return ExecuteArrays(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -2006,69 +2006,70 @@ Public Module ZoppaDSqlManager
                                        query As String,
                                        dynamicParameter As Object,
                                        sqlParameter As IEnumerable(Of Object)) As List(Of T)
-        Try
-            _logger.Value?.LogDebug($"Execute SQL : {query}")
-            _logger.Value?.LogDebug($"Use Transaction : {setting.Transaction IsNot Nothing}")
-            _logger.Value?.LogDebug($"Use command type : {setting.CommandType}")
-            _logger.Value?.LogDebug($"Timeout seconds : {setting.TimeOutSecond}")
-            Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
+        Using scope = _logger.Value?.BeginScope(NameOf(ExecuteDatas))
+            Try
+                _logger.Value?.LogDebug("Execute SQL : {query}", query)
+                _logger.Value?.LogDebug("Use Transaction : {setting.Transaction IsNot Nothing}", setting.Transaction IsNot Nothing)
+                _logger.Value?.LogDebug("Use command type : {setting.CommandType}", setting.CommandType)
+                _logger.Value?.LogDebug("Timeout seconds : {setting.TimeOutSecond}", setting.TimeOutSecond)
+                Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
 
-            Dim values As New List(Of T)()
-            Using command = setting.DbConnection.CreateCommand()
-                ' タイムアウト秒を設定
-                command.CommandTimeout = setting.TimeOutSecond
+                Dim values As New List(Of T)()
+                Using command = setting.DbConnection.CreateCommand()
+                    ' タイムアウト秒を設定
+                    command.CommandTimeout = setting.TimeOutSecond
 
-                ' トランザクションを設定
-                If setting.Transaction IsNot Nothing Then
-                    command.Transaction = setting.Transaction
-                End If
-
-                ' SQLクエリを設定
-                ' TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
-                command.CommandText = query
-                _logger.Value?.LogTrace($"Answer SQL : {command.CommandText}")
-
-                ' SQLパラメータが空なら動的パラメータを展開
-                Dim sqlPrms = sqlParameter.ToArray()
-                If sqlPrms.Length = 0 Then
-                    sqlPrms = New Object() {dynamicParameter}
-                End If
-
-                ' SQLコマンドタイプを設定
-                command.CommandType = setting.CommandType
-
-                ' パラメータの定義を設定
-                Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat,
-                                                  setting.ParameterChecker, setting.PropertyNames)
-
-                For Each prm In sqlPrms
-                    ' パラメータ変数に値を設定
-                    If prm IsNot Nothing Then
-                        SetParameter(command, prm, props, varFormat)
+                    ' トランザクションを設定
+                    If setting.Transaction IsNot Nothing Then
+                        command.Transaction = setting.Transaction
                     End If
 
-                    Using reader = command.ExecuteReader()
-                        ' 一行取得してインスタンスを生成
-                        Dim fields = New Object(reader.FieldCount - 1) {}
-                        Do While reader.Read()
-                            If reader.GetValues(fields) >= reader.FieldCount Then
-                                If fields.Length > 0 AndAlso TypeOf fields(0) Is T Then
-                                    values.Add(CType(fields(0), T))
-                                Else
-                                    values.Add(Nothing)
-                                End If
-                            End If
-                        Loop
-                    End Using
-                Next
-            End Using
-            Return values
+                    ' SQLクエリを設定
+                    ' TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
+                    command.CommandText = query
+                    _logger.Value?.LogTrace("Answer SQL : {command.CommandText}", command.CommandText)
 
-        Catch ex As Exception
-            _logger.Value?.LogError(ex.Message)
-            _logger.Value?.LogError(ex.StackTrace)
-            Throw
-        End Try
+                    ' SQLパラメータが空なら動的パラメータを展開
+                    Dim sqlPrms = sqlParameter.ToArray()
+                    If sqlPrms.Length = 0 Then
+                        sqlPrms = New Object() {dynamicParameter}
+                    End If
+
+                    ' SQLコマンドタイプを設定
+                    command.CommandType = setting.CommandType
+
+                    ' パラメータの定義を設定
+                    Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat,
+                                                      setting.ParameterChecker, setting.PropertyNames)
+
+                    For Each prm In sqlPrms
+                        ' パラメータ変数に値を設定
+                        If prm IsNot Nothing Then
+                            SetParameter(command, prm, props, varFormat)
+                        End If
+
+                        Using reader = command.ExecuteReader()
+                            ' 一行取得してインスタンスを生成
+                            Dim fields = New Object(reader.FieldCount - 1) {}
+                            Do While reader.Read()
+                                If reader.GetValues(fields) >= reader.FieldCount Then
+                                    If fields.Length > 0 AndAlso TypeOf fields(0) Is T Then
+                                        values.Add(CType(fields(0), T))
+                                    Else
+                                        values.Add(Nothing)
+                                    End If
+                                End If
+                            Loop
+                        End Using
+                    Next
+                End Using
+                Return values
+
+            Catch ex As Exception
+                _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
+                Throw
+            End Try
+        End Using
     End Function
 
     ''' <summary>SQLクエリを実行し、指定データ型のリストを取得します（非同期）</summary>
@@ -2134,7 +2135,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteDatas(Of T)(setting As Settings,
                                        query As String,
                                        dynamicParameter As Object) As List(Of T)
-        Return ExecuteDatas(Of T)(setting, query, dynamicParameter, New Object() {})
+        Return ExecuteDatas(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、指定データ型のリストを取得します（非同期）</summary>
@@ -2149,7 +2150,7 @@ Public Module ZoppaDSqlManager
                                                  dynamicParameter As Object) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteDatas(Of T)(setting, query, dynamicParameter, New Object() {})
+                Return ExecuteDatas(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -2164,7 +2165,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteDatas(Of T)(connect As IDbConnection,
                                        query As String,
                                        dynamicParameter As Object) As List(Of T)
-        Return ExecuteDatas(Of T)(New Settings(connect), query, dynamicParameter, New Object() {})
+        Return ExecuteDatas(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、指定データ型のリストを取得します（非同期）</summary>
@@ -2179,7 +2180,7 @@ Public Module ZoppaDSqlManager
                                                  dynamicParameter As Object) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteDatas(Of T)(New Settings(connect), query, dynamicParameter, New Object() {})
+                Return ExecuteDatas(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -2252,7 +2253,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteDatas(Of T)(setting As Settings,
                                        query As String) As List(Of T)
-        Return ExecuteDatas(Of T)(setting, query, Nothing, New Object() {})
+        Return ExecuteDatas(Of T)(setting, query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、指定データ型のリストを取得します（非同期）</summary>
@@ -2265,7 +2266,7 @@ Public Module ZoppaDSqlManager
                                                  query As String) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteDatas(Of T)(setting, query, Nothing, New Object() {})
+                Return ExecuteDatas(Of T)(setting, query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -2278,7 +2279,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteDatas(Of T)(connect As IDbConnection,
                                        query As String) As List(Of T)
-        Return ExecuteDatas(Of T)(New Settings(connect), query, Nothing, New Object() {})
+        Return ExecuteDatas(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行し、指定データ型のリストを取得します（非同期）</summary>
@@ -2291,7 +2292,7 @@ Public Module ZoppaDSqlManager
                                                  query As String) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteDatas(Of T)(New Settings(connect), query, Nothing, New Object() {})
+                Return ExecuteDatas(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -2311,57 +2312,58 @@ Public Module ZoppaDSqlManager
                                  query As String,
                                  dynamicParameter As Object,
                                  sqlParameter As IEnumerable(Of Object)) As Integer
-        Try
-            _logger.Value?.LogDebug($"Execute SQL : {query}")
-            _logger.Value?.LogDebug($"Use Transaction : {setting.Transaction IsNot Nothing}")
-            _logger.Value?.LogDebug($"Use command type : {setting.CommandType}")
-            _logger.Value?.LogDebug($"Timeout seconds : {setting.TimeOutSecond}")
-            Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
+        Using scope = _logger.Value?.BeginScope(NameOf(ExecuteQuery))
+            Try
+                _logger.Value?.LogDebug("Execute SQL : {query}", query)
+                _logger.Value?.LogDebug("Use Transaction : {setting.Transaction IsNot Nothing}", setting.Transaction IsNot Nothing)
+                _logger.Value?.LogDebug("Use command type : {setting.CommandType}", setting.CommandType)
+                _logger.Value?.LogDebug("Timeout seconds : {setting.TimeOutSecond}", setting.TimeOutSecond)
+                Dim varFormat = GetVariantFormat(setting.ParameterPrefix)
 
-            Dim ans As Integer = 0
-            Using command = setting.DbConnection.CreateCommand()
-                ' タイムアウト秒を設定
-                command.CommandTimeout = setting.TimeOutSecond
+                Dim ans As Integer = 0
+                Using command = setting.DbConnection.CreateCommand()
+                    ' タイムアウト秒を設定
+                    command.CommandTimeout = setting.TimeOutSecond
 
-                ' トランザクションを設定
-                If setting.Transaction IsNot Nothing Then
-                    command.Transaction = setting.Transaction
-                End If
-
-                ' SQLクエリを設定
-                'TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
-                command.CommandText = query
-                _logger.Value?.LogTrace($"Answer SQL : {command.CommandText}")
-
-                ' SQLパラメータが空なら動的パラメータを展開
-                Dim sqlPrms = sqlParameter.ToArray()
-                If sqlPrms.Length = 0 Then
-                    sqlPrms = New Object() {dynamicParameter}
-                End If
-
-                ' SQLコマンドタイプを設定
-                command.CommandType = setting.CommandType
-
-                ' パラメータの定義を設定
-                Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat, setting.ParameterChecker, setting.PropertyNames)
-
-                For Each prm In sqlPrms
-                    ' パラメータ変数に値を設定
-                    If prm IsNot Nothing Then
-                        SetParameter(command, prm, props, varFormat)
+                    ' トランザクションを設定
+                    If setting.Transaction IsNot Nothing Then
+                        command.Transaction = setting.Transaction
                     End If
 
-                    ' SQLを実行
-                    ans += command.ExecuteNonQuery()
-                Next
-            End Using
-            Return ans
+                    ' SQLクエリを設定
+                    'TODO: command.CommandText = ParserAnalysis.Replase(query, dynamicParameter)
+                    command.CommandText = query
+                    _logger.Value?.LogTrace("Answer SQL : {command.CommandText}", command.CommandText)
 
-        Catch ex As Exception
-            _logger.Value?.LogError(ex.Message)
-            _logger.Value?.LogError(ex.StackTrace)
-            Throw
-        End Try
+                    ' SQLパラメータが空なら動的パラメータを展開
+                    Dim sqlPrms = sqlParameter.ToArray()
+                    If sqlPrms.Length = 0 Then
+                        sqlPrms = New Object() {dynamicParameter}
+                    End If
+
+                    ' SQLコマンドタイプを設定
+                    command.CommandType = setting.CommandType
+
+                    ' パラメータの定義を設定
+                    Dim props = SetSqlParameterDefine(command, sqlPrms, varFormat, setting.ParameterChecker, setting.PropertyNames)
+
+                    For Each prm In sqlPrms
+                        ' パラメータ変数に値を設定
+                        If prm IsNot Nothing Then
+                            SetParameter(command, prm, props, varFormat)
+                        End If
+
+                        ' SQLを実行
+                        ans += command.ExecuteNonQuery()
+                    Next
+                End Using
+                Return ans
+
+            Catch ex As Exception
+                _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
+                Throw
+            End Try
+        End Using
     End Function
 
     ''' <summary>SQLクエリを実行します（非同期）</summary>
@@ -2424,7 +2426,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteQuery(setting As Settings,
                                  query As String,
                                  dynamicParameter As Object) As Integer
-        Return ExecuteQuery(setting, query, dynamicParameter, New Object() {})
+        Return ExecuteQuery(setting, query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行します（非同期）</summary>
@@ -2439,7 +2441,7 @@ Public Module ZoppaDSqlManager
                                            dynamicParameter As Object) As Task(Of Integer)
         Return Await Task.Run(
             Function()
-                Return ExecuteQuery(setting, query, dynamicParameter, New Object() {})
+                Return ExecuteQuery(setting, query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -2454,7 +2456,7 @@ Public Module ZoppaDSqlManager
     Public Function ExecuteQuery(connect As IDbConnection,
                                  query As String,
                                  dynamicParameter As Object) As Integer
-        Return ExecuteQuery(New Settings(connect), query, dynamicParameter, New Object() {})
+        Return ExecuteQuery(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行します（非同期）</summary>
@@ -2469,7 +2471,7 @@ Public Module ZoppaDSqlManager
                                            dynamicParameter As Object) As Task(Of Integer)
         Return Await Task.Run(
             Function()
-                Return ExecuteQuery(New Settings(connect), query, dynamicParameter, New Object() {})
+                Return ExecuteQuery(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -2539,7 +2541,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteQuery(setting As Settings,
                                  query As String) As Integer
-        Return ExecuteQuery(setting, query, Nothing, New Object() {})
+        Return ExecuteQuery(setting, query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行します（非同期）</summary>
@@ -2553,7 +2555,7 @@ Public Module ZoppaDSqlManager
                                            query As String) As Task(Of Integer)
         Return Await Task.Run(
             Function()
-                Return ExecuteQuery(setting, query, Nothing, New Object() {})
+                Return ExecuteQuery(setting, query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -2567,7 +2569,7 @@ Public Module ZoppaDSqlManager
     <Extension()>
     Public Function ExecuteQuery(connect As IDbConnection,
                                  query As String) As Integer
-        Return ExecuteQuery(New Settings(connect), query, Nothing, New Object() {})
+        Return ExecuteQuery(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
     End Function
 
     ''' <summary>SQLクエリを実行します（非同期）</summary>
@@ -2581,7 +2583,7 @@ Public Module ZoppaDSqlManager
                                            query As String) As Task(Of Integer)
         Return Await Task.Run(
             Function()
-                Return ExecuteQuery(New Settings(connect), query, Nothing, New Object() {})
+                Return ExecuteQuery(New Settings(connect), query, Nothing, Array.Empty(Of Object)())
             End Function
         )
     End Function
@@ -2607,8 +2609,7 @@ Public Module ZoppaDSqlManager
             Return ExecuteQuery(setting, query, dynamicParameter, datas)
 
         Catch ex As Exception
-            _logger.Value?.LogError(ex.Message)
-            _logger.Value?.LogError(ex.StackTrace)
+            _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
             Throw
         End Try
     End Function
@@ -2685,8 +2686,7 @@ Public Module ZoppaDSqlManager
             Return ExecuteQuery(setting, query, Nothing, datas)
 
         Catch ex As Exception
-            _logger.Value?.LogError(ex.Message)
-            _logger.Value?.LogError(ex.StackTrace)
+            _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
             Throw
         End Try
     End Function

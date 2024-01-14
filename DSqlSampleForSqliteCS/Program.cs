@@ -126,7 +126,7 @@ class Artist(long artistId, string name)
 
     public string Name { get; } = name;
 
-    public List<Album> Albums { get; } = new List<Album>();
+    public List<Album> Albums { get; } = [];
 }
 
 record class CsvData(long Indexno, string Name);

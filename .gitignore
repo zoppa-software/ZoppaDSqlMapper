@@ -1,0 +1,13 @@
+.vs/
+DSqlSampleForSqliteCS/bin/
+DSqlSampleForSqliteCS/obj/
+ZoppaDSqlMapper/bin/
+ZoppaDSqlMapper/obj/
+LexicalConsole/bin/
+LexicalConsole/obj/
+ZoppaDSqlCompiler/bin/
+ZoppaDSqlCompiler/obj/
+ZoppaDSqlTest/bin/
+ZoppaDSqlTest/coveragereport/
+ZoppaDSqlTest/obj/
+ZoppaDSqlTest/TestResults/

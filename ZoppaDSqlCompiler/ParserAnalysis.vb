@@ -8,57 +8,221 @@ Imports ZoppaDSqlCompiler.Express
 Imports ZoppaDSqlCompiler.Tokens
 Imports ZoppaDSqlCompiler.TokenCollection
 Imports Microsoft.Extensions.Logging
+Imports System.Net.Http
+Imports System.Security.Cryptography
 
 ''' <summary>トークンを解析する。</summary>
 Friend Module ParserAnalysis
 
-    ''' <summary>動的SQLの置き換えを実行します。</summary>
-    ''' <param name="sqlQuery">動的SQL。</param>
-    ''' <param name="parameter">パラメータ。</param>
-    ''' <returns>置き換え結果。</returns>
-    Public Function Replase(sqlQuery As String, Optional parameter As Object = Nothing) As String
-        ' トークン配列に変換
-        Dim tokens = LexicalAnalysis.Compile(sqlQuery)
-        Logger.Value?.LogDebug("tokens")
-        For i As Integer = 0 To tokens.Count - 1
-            Logger.Value?.LogDebug($"{i + 1} : {tokens(i)}")
+    Friend Function Replase(tokens As List(Of TokenPosition), parameter As IEnvironmentValue) As String
+        Dim tknPtr = New TokenStream(tokens)
+        Dim buffer As New StringBuilder()
+
+        ReplaseQuery(tknPtr, parameter, buffer, False)
+
+        Return buffer.ToString()
+    End Function
+
+    Private Sub ReplaseQuery(reader As TokenStream, parameter As IEnvironmentValue, buffer As StringBuilder, isTrim As Boolean)
+        If reader.HasNext Then
+            Dim tkn = reader.Current
+            Dim nest As Integer = 0
+
+            Select Case tkn.TokenName
+                Case NameOf(QueryToken)
+                    buffer.Append(tkn.ToString())
+                    reader.Move(1)
+
+                Case NameOf(ReplaseToken)
+                    Dim rtoken = tkn.GetToken(Of ReplaseToken)()
+                    If rtoken IsNot Nothing Then
+                        Dim rval = parameter.GetValue(If(rtoken.Contents?.ToString(), ""))
+                        Dim ans = GetRefValue(rval, rtoken.IsEscape)
+                        buffer.Append(ans)
+                    End If
+                    reader.Move(1)
+
+                Case NameOf(IfToken)
+                    reader.Move(1)
+                    Dim ifTokens = CollectBlockToken(reader, NameOf(IfToken), NameOf(EndIfToken))
+                    EvaluationIf(tkn.GetToken(Of IfToken)(), ifTokens, buffer, parameter)
+
+                Case NameOf(ForEachToken)
+                    reader.Move(1)
+                    Dim trimTokens = CollectBlockToken(reader, NameOf(ForEachToken), NameOf(EndForToken))
+                    Dim b As Integer = 50
+
+                Case NameOf(TrimToken)
+                    reader.Move(1)
+                    Dim trimTokens = CollectBlockToken(reader, NameOf(TrimToken), NameOf(EndTrimToken))
+                    Dim trimBuffer As New StringBuilder()
+                    ReplaseQuery(New TokenStream(trimTokens), parameter, trimBuffer, True)
+
+                    ' TODO:
+                    buffer.Append(trimBuffer.ToString())
+            End Select
+
+            ReplaseQuery(reader, parameter, buffer, isTrim)
+        End If
+    End Sub
+
+    Private Function CollectBlockToken(reader As TokenStream,
+                                       startTokenName As String,
+                                       endTokenName As String) As List(Of TokenPosition)
+        Dim res As New List(Of TokenPosition)()
+
+        Dim nest As Integer = 0
+        Do While reader.HasNext
+            Dim tkn = reader.Current
+            If tkn.TokenName = NameOf(TrimToken) Then
+                nest += 1
+            ElseIf tkn.TokenName = endTokenName Then
+                If nest = 0 Then
+                    reader.Move(1)
+                    Exit Do
+                Else
+                    nest -= 1
+                End If
+            End If
+            res.Add(tkn)
+            reader.Move(1)
+        Loop
+        Return res
+    End Function
+
+    Private Sub EvaluationIf(sifToken As IToken,
+                             tokens As List(Of TokenPosition),
+                             buffer As StringBuilder,
+                             parameter As IEnvironmentValue)
+        ' If、ElseIf、Elseブロックを集める
+        Dim blocks As New List(Of (condition As IToken, block As List(Of TokenPosition)))()
+        blocks.Add((sifToken, New List(Of TokenPosition)()))
+
+        Dim nest As Integer = 0
+        For Each tkn In tokens
+            Select Case tkn.TokenName
+                Case NameOf(IfToken)
+                    nest += 1
+                Case NameOf(ElseIfToken)
+                    If nest = 0 Then
+                        blocks.Add((tkn.GetToken(Of ElseIfToken), New List(Of TokenPosition)()))
+                    End If
+                Case NameOf(ElseToken)
+                    If nest = 0 Then
+                        blocks.Add((tkn.GetToken(Of ElseToken), New List(Of TokenPosition)()))
+                    End If
+                Case NameOf(EndIfToken)
+                    If nest = 0 Then
+                        Exit For
+                    Else
+                        nest -= 1
+                    End If
+
+                Case Else
+                    blocks(blocks.Count - 1).block.Add(tkn)
+            End Select
         Next
 
-        ' 置き換え式を階層化する
-        Dim hierarchy = CreateHierarchy(tokens)
+        ' If、ElseIf、Elseブロックを評価
+        Dim output = False
+        For Each tkn In blocks
+            Select Case tkn.condition.TokenName
+                Case NameOf(IfToken), NameOf(ElseIfToken)
+                    ' 条件を評価して真ならば、ブロックを出力
+                    Dim ifans = Executes(DirectCast(tkn.condition, ICommandToken).CommandTokens, parameter)
+                    If TypeOf ifans.Contents Is Boolean AndAlso CBool(ifans.Contents) Then
+                        ReplaseQuery(New TokenStream(tkn.block), parameter, buffer, False)
+                        output = True
+                        Exit For
+                    End If
 
-        ' 置き換え式を解析して出力文字列を取得します。
-        Dim buffer As New StringBuilder()
-        Dim values = New EnvironmentObjectValue(parameter)
-        Dim ansParts As New List(Of EvaParts)()
-        Evaluation(hierarchy.Children, buffer, values, ansParts)
+                Case NameOf(ElseToken)
+                    ReplaseQuery(New TokenStream(tkn.block), parameter, buffer, False)
+                    output = True
+            End Select
+        Next
 
-        ' 空白行を取り除いて返す
-        Dim ans As New StringBuilder(buffer.Length)
-        Using sr As New StringReader(buffer.ToString())
-            Do While sr.Peek() <> -1
-                Dim ln = sr.ReadLine()
-                If ln.Trim() <> "" Then ans.AppendLine(ln.TrimEnd())
-            Loop
-        End Using
-        Return ans.ToString().Trim()
-    End Function
+        '' If、ElseIf、Elseブロックを評価
+        'Dim output = False
+        'For Each iftkn In blocks
+        '    Select Case iftkn.TargetToken.TokenName
+        '        Case NameOf(ifToken), NameOf(ElseIfToken)
+        '            ' 条件を評価して真ならば、ブロックを出力
+        '            Dim ifans = Executes(iftkn.TargetToken.GetCommandToken().CommandTokens, prm)
+        '            If TypeOf ifans.Contents Is Boolean AndAlso CBool(ifans.Contents) Then
+        '                ansParts.Add(New EvaParts(iftkn.TargetToken, ""))
+        '                Evaluation(iftkn.Children, buffer, prm, ansParts)
+        '                output = True
+        '                Exit For
+        '            End If
 
-    ''' <summary>置き換え式の階層を作成します。</summary>
-    ''' <param name="src">トークンリスト。</param>
-    ''' <returns>階層リンク。</returns>
-    Public Function CreateHierarchy(src As List(Of TokenPosition)) As TokenHierarchy
-        Dim root As New TokenHierarchy(Nothing)
-        If src?.Count > 0 Then
-            ' 評価のため並び変え
-            Dim tmp As New List(Of TokenPosition)(src)
-            tmp.Reverse()
+        '        Case NameOf(ElseToken)
+        '            ansParts.Add(New EvaParts(iftkn.TargetToken, ""))
+        '            Evaluation(iftkn.Children, buffer, prm, ansParts)
+        '            output = True
+        '            Exit For
+        '    End Select
+        'Next
 
-            ' 階層を作成
-            CreateHierarchy("", root, tmp)
-        End If
-        Return root
-    End Function
+        'If output Then
+        '    ' EndIfトークンを追加
+        '    ansParts.Add(New EvaParts(endifTkn, ""))
+        'Else
+        '    ' 非表示トークンを追加
+        '    For Each iftkn In blocks
+        '        ansParts.Add(New EvaParts(iftkn.TargetToken))
+        '    Next
+        '    ansParts.Add(New EvaParts(endifTkn))
+        'End If
+    End Sub
+
+    '''' <summary>動的SQLの置き換えを実行します。</summary>
+    '''' <param name="sqlQuery">動的SQL。</param>
+    '''' <param name="parameter">パラメータ。</param>
+    '''' <returns>置き換え結果。</returns>
+    'Public Function Replase(sqlQuery As String, Optional parameter As Object = Nothing) As String
+    '    ' トークン配列に変換
+    '    Dim tokens = LexicalAnalysis.SplitQueryToken(sqlQuery)
+    '    Logger.Value?.LogDebug("tokens")
+    '    For i As Integer = 0 To tokens.Count - 1
+    '        Logger.Value?.LogDebug($"{i + 1} : {tokens(i)}")
+    '    Next
+
+    '    ' 置き換え式を階層化する
+    '    Dim hierarchy = CreateHierarchy(tokens)
+
+    '    ' 置き換え式を解析して出力文字列を取得します。
+    '    Dim buffer As New StringBuilder()
+    '    Dim values = New EnvironmentObjectValue(parameter)
+    '    Dim ansParts As New List(Of EvaParts)()
+    '    Evaluation(hierarchy.Children, buffer, values, ansParts)
+
+    '    ' 空白行を取り除いて返す
+    '    Dim ans As New StringBuilder(buffer.Length)
+    '    Using sr As New StringReader(buffer.ToString())
+    '        Do While sr.Peek() <> -1
+    '            Dim ln = sr.ReadLine()
+    '            If ln.Trim() <> "" Then ans.AppendLine(ln.TrimEnd())
+    '        Loop
+    '    End Using
+    '    Return ans.ToString().Trim()
+    'End Function
+
+    '''' <summary>置き換え式の階層を作成します。</summary>
+    '''' <param name="src">トークンリスト。</param>
+    '''' <returns>階層リンク。</returns>
+    'Public Function CreateHierarchy(src As List(Of TokenPosition)) As TokenHierarchy
+    '    Dim root As New TokenHierarchy(Nothing)
+    '    If src?.Count > 0 Then
+    '        ' 評価のため並び変え
+    '        Dim tmp As New List(Of TokenPosition)(src)
+    '        tmp.Reverse()
+
+    '        ' 階層を作成
+    '        CreateHierarchy("", root, tmp)
+    '    End If
+    '    Return root
+    'End Function
 
     ''' <summary>置き換え式の階層を作成します。</summary>
     ''' <param name="errMsg">エラーメッセージ。</param>
@@ -677,18 +841,6 @@ Friend Module ParserAnalysis
             rParen.IsOutpit = False
             Return False
         End If
-    End Function
-
-    ''' <summary>式を解析して結果を取得します。</summary>
-    ''' <param name="expression">式文字列。</param>
-    ''' <param name="parameter">パラメータ。</param>
-    ''' <returns>解析結果。</returns>
-    Public Function Executes(expression As String, Optional parameter As Object = Nothing) As IToken
-        ' トークン配列に変換
-        Dim tokens = LexicalAnalysis.SplitToken(expression)
-
-        ' 式木を実行
-        Return Executes(tokens, New EnvironmentObjectValue(parameter))
     End Function
 
     ''' <summary>式を解析して結果を取得します。</summary>

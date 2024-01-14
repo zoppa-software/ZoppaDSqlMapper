@@ -4,68 +4,110 @@ Option Explicit On
 Imports System.Text
 Imports ZoppaDSqlCompiler.Tokens
 Imports ZoppaDSqlCompiler.TokenCollection
+Imports System.Runtime.CompilerServices
+Imports System.Net.Http
 
 ''' <summary>字句解析機能。</summary>
 Friend Module LexicalAnalysis
 
+    ''' <summary>トークン種別。</summary>
+    Private Enum TKN_TYPE
+
+        ''' <summary>クエリトークン。</summary>
+        QUERY_TKN
+
+        ''' <summary>コードトークン。</summary>
+        CODE_TKN
+
+        ''' <summary>置き換えトークン。</summary>
+        REPLASE_TKN
+
+    End Enum
+
     ''' <summary>文字列をトークン解析します。</summary>
     ''' <param name="command">文字列。</param>
     ''' <returns>トークンリスト。</returns>
-    Public Function Compile(command As String) As List(Of TokenPosition)
+    Public Function SplitQueryToken(command As String) As List(Of TokenPosition)
         Dim tokens As New List(Of TokenPosition)()
 
         Dim reader = New StringPtr(command)
 
         Dim buffer As New StringBuilder()
-        Dim token As IToken
-        Dim pos As Integer
+        Dim tknType = TKN_TYPE.QUERY_TKN
+        Dim pos As Integer = 0
         Do While reader.HasNext
-            Dim c = reader.CurrentToMove()
+            Dim c = reader.Current()
+
             Select Case c
                 Case "{"c
+                    tokens.AddIfNull(buffer.CreateQueryToken(), pos)
                     pos = reader.CurrentPosition
-                    token = CreateQueryToken(buffer)
-                    If token IsNot Nothing Then tokens.Add(New TokenPosition(token, pos))
+                    reader.Move(1)
+                    tknType = TKN_TYPE.CODE_TKN
 
+                Case "}"c
+                    Select Case tknType
+                        Case TKN_TYPE.QUERY_TKN
+                            Throw New DSqlAnalysisException("}に対応する{を入力してください")
+                        Case TKN_TYPE.CODE_TKN
+                            tokens.AddIfNull(buffer.CreateCodeToken(), pos)
+                        Case TKN_TYPE.REPLASE_TKN
+                            tokens.AddIfNull(buffer.CreateReplaseToken(c = "#"c), pos)
+                    End Select
                     pos = reader.CurrentPosition
-                    token = CreateTokens(reader)
-                    If token IsNot Nothing Then tokens.Add(New TokenPosition(token, pos))
+                    reader.Move(1)
+                    tknType = TKN_TYPE.QUERY_TKN
 
                 Case "#"c, "!"c, "$"c
-                    If reader.Current = "{"c Then
+                    If reader.NestChar(1) = "{"c Then
+                        tokens.AddIfNull(buffer.CreateQueryToken(), pos)
                         pos = reader.CurrentPosition
-                        token = CreateQueryToken(buffer)
-                        If token IsNot Nothing Then tokens.Add(New TokenPosition(token, pos))
-
-                        reader.CurrentToMove()
-                        pos = reader.CurrentPosition
-                        token = CreateReplaseToken(reader, c = "#"c)
-                        tokens.Add(New TokenPosition(token, pos))
+                        reader.Move(2)
+                        tknType = TKN_TYPE.REPLASE_TKN
                     Else
                         buffer.Append(c)
+                        reader.Move(1)
                     End If
 
                 Case "\"c
-                    If reader.Current = "{"c OrElse reader.Current = "}"c Then
+                    If reader.NestChar(1) = "{"c OrElse reader.NestChar(1) = "}"c Then
+                        reader.Move(1)
                         buffer.Append(reader.Current)
-                        reader.CurrentToMove()
+                        reader.Move(1)
+                    Else
+                        buffer.Append(c)
+                        reader.Move(1)
                     End If
 
                 Case Else
                     buffer.Append(c)
+                    reader.Move(1)
             End Select
         Loop
 
-        pos = reader.CurrentPosition
-        token = CreateQueryToken(buffer)
-        If token IsNot Nothing Then tokens.Add(New TokenPosition(token, pos))
+        Select Case tknType
+            Case TKN_TYPE.QUERY_TKN
+                tokens.AddIfNull(buffer.CreateQueryToken(), pos)
+            Case TKN_TYPE.CODE_TKN
+                Throw New DSqlAnalysisException("コードトークンが閉じられていません")
+            Case TKN_TYPE.REPLASE_TKN
+                Throw New DSqlAnalysisException("置き換えトークンが閉じられていません")
+        End Select
 
         Return tokens
     End Function
 
+    <Extension>
+    Private Sub AddIfNull(tokens As List(Of TokenPosition), token As IToken, pos As Integer)
+        If token IsNot Nothing Then
+            tokens.Add(New TokenPosition(token, pos))
+        End If
+    End Sub
+
     ''' <summary>直接出力するクエリトークンを生成します。</summary>
     ''' <param name="buffer">文字列バッファ。</param>
     ''' <returns>クエリトークン。</returns>
+    <Extension>
     Private Function CreateQueryToken(buffer As StringBuilder) As IToken
         Dim res As IToken = Nothing
         If buffer.Length > 0 Then
@@ -75,20 +117,14 @@ Friend Module LexicalAnalysis
         Return res
     End Function
 
-    ''' <summary>置き換えトークンを生成します。</summary>
-    ''' <param name="reader">入力文字ストリーム。</param>
-    ''' <param name="isEscape">エスケープするならば真。</param>
-    ''' <returns>置き換えトークン。</returns>
-    Private Function CreateReplaseToken(reader As StringPtr, isEscape As Boolean) As IToken
-        Return New ReplaseToken(GetPartitionString(reader, "置き換えトークンが閉じられていません"), isEscape)
-    End Function
-
     ''' <summary>コードトークンリストを生成します。</summary>
-    ''' <param name="reader">入力文字ストリーム。</param>
-    ''' <returns>トークンリスト。</returns>
-    Private Function CreateTokens(reader As StringPtr) As IToken
-        Dim codeStr = GetPartitionString(reader, "コードトークンが閉じられていません")?.Trim()
-        Dim lowStr = codeStr.ToLower()
+    ''' <param name="buffer">文字列バッファ。</param>
+    ''' <returns>コードトークン</returns>
+    <Extension>
+    Private Function CreateCodeToken(buffer As StringBuilder) As IToken
+        Dim codeStr = buffer.ToString().Trim()
+        buffer.Clear()
+        Dim lowStr = If(codeStr.Length > 9, codeStr.Substring(0, 9), codeStr).ToLower()
 
         If lowStr.StartsWith("if ") Then
             Return New IfToken(SplitToken(codeStr.Substring(3)))
@@ -110,35 +146,19 @@ Friend Module LexicalAnalysis
             Return New TrimToken()
         ElseIf lowStr.StartsWith("end trim") Then
             Return EndTrimToken.Value
-        Else
-            Return New QueryToken("")
         End If
         Return Nothing
     End Function
 
-    ''' <summary>}で閉じられた文字列を取得します。</summary>
-    ''' <param name="reader">入力文字ストリーム。</param>
-    ''' <param name="errMessage">閉じられていないときのメッセージ。</param>
-    ''' <returns>閉じられた範囲の文字列。</returns>
-    Private Function GetPartitionString(reader As StringPtr, errMessage As String) As String
-        Dim buffer As New StringBuilder()
-        Do While reader.HasNext
-            Dim c = reader.CurrentToMove()
-            Select Case c
-                Case "}"c
-                    Return buffer.ToString()
-
-                Case "\"c
-                    If reader.Current = "{"c OrElse reader.Current = "}"c Then
-                        buffer.Append(reader.Current)
-                        reader.CurrentToMove()
-                    End If
-
-                Case Else
-                    buffer.Append(c)
-            End Select
-        Loop
-        Throw New DSqlAnalysisException(errMessage)
+    ''' <summary>置き換えトークンを生成します。</summary>
+    ''' <param name="buffer">文字列バッファ。</param>
+    ''' <param name="isEscape">エスケープするならば真。</param>
+    ''' <returns>置き換えトークン。</returns>
+    <Extension>
+    Private Function CreateReplaseToken(buffer As StringBuilder, isEscape As Boolean) As IToken
+        Dim repStr = buffer.ToString().Trim()
+        buffer.Clear()
+        Return If(repStr.Length > 0, New ReplaseToken(repStr, isEscape), Nothing)
     End Function
 
     ''' <summary>文字列を分割してトークンリストを作成する。</summary>
@@ -399,14 +419,6 @@ Friend Module LexicalAnalysis
             Me.mPointer = 0
             Me.mChars = inputstr.ToCharArray()
         End Sub
-
-        ''' <summary>カレント文字を取得し、ポイントをひとつ進める。</summary>
-        ''' <returns>カレント文字列。</returns>
-        Public Function CurrentToMove() As Char
-            Dim c = Me.Current
-            Me.mPointer += 1
-            Return c
-        End Function
 
         ''' <summary>カレント位置より相対的な文字を取得する。</summary>
         ''' <param name="point">相対位置。</param>

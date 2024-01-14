@@ -173,8 +173,25 @@ Public Module ZoppaDSqlCompiler
     ''' <param name="sqlQuery">動的SQL。</param>
     ''' <param name="parameter">動的SQL、クエリパラメータ用の情報。</param>
     ''' <returns>コンパイル結果。</returns>
+    <Extension>
     Public Function Compile(sqlQuery As String, Optional parameter As Object = Nothing) As String
         Using scope = _logger.Value?.BeginScope(NameOf(Compile))
+            Try
+                Logger.Value?.LogDebug("compile sql : {sqlQuery}", sqlQuery)
+                LoggingParameter(parameter)
+
+                ' トークンリストを取得
+                Dim tokens = GetNewOrHistory(sqlQuery, AddressOf LexicalAnalysis.SplitQueryToken)
+                LoggingTokens(tokens)
+
+                ' 評価
+                Dim ans = ParserAnalysis.Replase(tokens, New EnvironmentObjectValue(parameter))
+                Logger.Value?.LogDebug("answer compile sql : {ans}", ans)
+
+            Catch ex As Exception
+                _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
+                Throw
+            End Try
             'Try
             '    LoggingDebug($"Compile SQL : {sqlQuery}")
             '    LoggingParameter(parameter)
@@ -189,6 +206,30 @@ Public Module ZoppaDSqlCompiler
         End Using
     End Function
 
+    ''' <summary>あれば履歴からトークンリストを取得、なければ新規作成して履歴に追加します。</summary>
+    ''' <param name="sqlQuery">評価する文字列。</param>
+    ''' <returns>トークンリスト。</returns>
+    Private Function GetNewOrHistoryByCompile(sqlQuery As String) As List(Of TokenPosition)
+        SyncLock _cmdHistory
+            ' 履歴にあればぞれを返す
+            For i As Integer = 0 To _cmdHistory.Count - 1
+                If _cmdHistory(i).Item1 = sqlQuery Then
+                    Return _cmdHistory(i).Item2
+                End If
+            Next
+
+            ' 履歴になければ新規作成
+            Dim tokens = LexicalAnalysis.SplitToken(sqlQuery)
+            _cmdHistory.Add((sqlQuery, tokens))
+
+            If _cmdHistory.Count > MAX_HISTORY_SIZE Then
+                _cmdHistory.RemoveAt(0)
+            End If
+
+            Return tokens
+        End SyncLock
+    End Function
+
     ''' <summary>引数の文字列を評価して値を取得します。</summary>
     ''' <param name="expression">評価する文字列。</param>
     ''' <param name="parameter">環境値。</param>
@@ -201,7 +242,7 @@ Public Module ZoppaDSqlCompiler
                 LoggingParameter(parameter)
 
                 ' トークンリストを取得
-                Dim tokens = GetNewOrHistory(expression)
+                Dim tokens = GetNewOrHistory(expression, AddressOf LexicalAnalysis.SplitToken)
                 LoggingTokens(tokens)
 
                 ' 評価
@@ -220,7 +261,7 @@ Public Module ZoppaDSqlCompiler
     ''' <summary>あれば履歴からトークンリストを取得、なければ新規作成して履歴に追加します。</summary>
     ''' <param name="sqlQuery">評価する文字列。</param>
     ''' <returns>トークンリスト。</returns>
-    Private Function GetNewOrHistory(sqlQuery As String) As List(Of TokenPosition)
+    Private Function GetNewOrHistory(sqlQuery As String, splitFunc As Func(Of String, List(Of TokenPosition))) As List(Of TokenPosition)
         SyncLock _cmdHistory
             ' 履歴にあればぞれを返す
             For i As Integer = 0 To _cmdHistory.Count - 1
@@ -230,7 +271,7 @@ Public Module ZoppaDSqlCompiler
             Next
 
             ' 履歴になければ新規作成
-            Dim tokens = LexicalAnalysis.SplitToken(sqlQuery)
+            Dim tokens = splitFunc(sqlQuery)
             _cmdHistory.Add((sqlQuery, tokens))
 
             If _cmdHistory.Count > MAX_HISTORY_SIZE Then

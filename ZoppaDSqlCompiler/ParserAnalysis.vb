@@ -102,7 +102,7 @@ Friend Module ParserAnalysis
         Dim res As New StringBuilder(buffer.Length)
 
         ' 改行単位で分割
-        Dim lines = buffer.ToString().Split(Environment.NewLine)
+        Dim lines = buffer.ToString().Split(New String() {Environment.NewLine}, StringSplitOptions.None)
 
         ' 空白行以外を追加
         For i As Integer = 0 To lines.Length - 2
@@ -361,17 +361,17 @@ Friend Module ParserAnalysis
 
     ''' <summary>Selectを評価します。</summary>
     ''' <param name="sqlQuery">元のSQL。</param>
-    ''' <param name="sifToken">Ifのトークンリスト。</param>
+    ''' <param name="sselToken">Ifのトークンリスト。</param>
     ''' <param name="tokens">ブロック内のトークンリスト。</param>
     ''' <param name="buffer">結果バッファ。</param>
     ''' <param name="parameter">パラメータ。</param>
     Private Sub EvaluationSelect(sqlQuery As String,
-                                 sifToken As IToken,
+                                 sselToken As IToken,
                                  tokens As List(Of TokenPosition),
                                  buffer As StringBuilder,
                                  parameter As IEnvironmentValue)
         Dim blocks As New List(Of (condition As IToken, block As List(Of TokenPosition))) From {
-            (sifToken, New List(Of TokenPosition)())
+            (sselToken, New List(Of TokenPosition)())
         }
 
         ' Select、Case、Elseブロックを集める
@@ -405,12 +405,16 @@ Friend Module ParserAnalysis
 
         ' Select、Case、Elseブロックを評価
         Dim lclbuf As New StringBuilder()
-        For Each tkn In blocks
+
+        Dim caseVal = Executes(DirectCast(blocks(0).condition, ICommandToken).CommandTokens, parameter)
+        For i As Integer = 1 To blocks.Count - 1
+            Dim tkn = blocks(i)
+
             Select Case tkn.condition.TokenType
-                Case GetType(IfToken), GetType(ElseIfToken)
+                Case GetType(CaseToken)
                     ' 条件を評価して真ならば、ブロックを出力
-                    Dim ifans = Executes(DirectCast(tkn.condition, ICommandToken).CommandTokens, parameter)
-                    If TypeOf ifans.Contents Is Boolean AndAlso CBool(ifans.Contents) Then
+                    Dim caseans = Executes(DirectCast(tkn.condition, ICommandToken).CommandTokens, parameter)
+                    If caseans.Contents?.Equals(caseVal.Contents) Then
                         Dim tkns As New List(Of TokenPosition)(tkn.block)
                         ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
                         Exit For
@@ -421,6 +425,22 @@ Friend Module ParserAnalysis
                     ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
             End Select
         Next
+        'For Each tkn In blocks
+        '    Select Case tkn.condition.TokenType
+        '        Case GetType(IfToken), GetType(ElseIfToken)
+        '            ' 条件を評価して真ならば、ブロックを出力
+        '            Dim ifans = Executes(DirectCast(tkn.condition, ICommandToken).CommandTokens, parameter)
+        '            If TypeOf ifans.Contents Is Boolean AndAlso CBool(ifans.Contents) Then
+        '                Dim tkns As New List(Of TokenPosition)(tkn.block)
+        '                ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
+        '                Exit For
+        '            End If
+
+        '        Case GetType(ElseToken)
+        '            Dim tkns As New List(Of TokenPosition)(tkn.block)
+        '            ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
+        '    End Select
+        'Next
         buffer.Append(lclbuf.ToString())
     End Sub
 

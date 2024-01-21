@@ -134,7 +134,7 @@ Public Class AnalysisTest
         Assert.True(NumberToken.ConvertToken(20).EqualCondition(a302))
 
         Dim a401 = "'桃' + '太郎'".Executes().Contents
-        Assert.Equal(a401, "桃太郎")
+        Assert.Equal(a401.ToString(), "桃太郎")
         Dim a402 = "100 + '15'".Executes().Contents
         Assert.Equal(115, a402)
 
@@ -213,20 +213,20 @@ Public Class AnalysisTest
     Sub EnvironmentTest()
         Dim env As New EnvironmentObjectValue(New With {.prm1 = 100, .prm2 = "abc"})
         Assert.Equal(env.GetValue("prm1"), 100)
-        Assert.Equal(env.GetValue("prm2"), "abc")
+        Assert.Equal("abc", env.GetValue("prm2").ToString())
 
-        Assert.Equal(env.GetValue("prm2"), "abc")
+        Assert.Equal(env.GetValue("prm2").ToString(), "abc")
 
         env.AddVariant("prm3", "def")
-        Assert.Equal(env.GetValue("prm3"), "def")
+        Assert.Equal(env.GetValue("prm3").ToString(), "def")
 
         env.AddVariant("prm3", "xyz")
-        Assert.Equal(env.GetValue("prm3"), "xyz")
+        Assert.Equal(env.GetValue("prm3").ToString(), "xyz")
 
         env.LocalVarClear()
         Assert.Throws(Of DSqlAnalysisException)(
             Sub()
-                Assert.Equal(env.GetValue("prm3"), "def")
+                Assert.Equal(env.GetValue("prm3").ToString(), "def")
             End Sub
         )
     End Sub

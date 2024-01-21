@@ -190,6 +190,42 @@ where
     End Sub
 
     <Fact>
+    Public Sub SelectTest()
+        Dim query = "" &
+"SELECT
+    *
+FROM
+{select mode}
+    {case 1}
+    TEST_TABLE1
+    {case 2}
+    TEST_TABLE2
+    {else}
+    TEST_TABLE0
+{/select}"
+        Dim ans1 = query.Compile(New With {.mode = 1})
+        Assert.Equal(ans1.Trim(),
+"SELECT
+    *
+FROM
+    TEST_TABLE1")
+
+        Dim ans2 = query.Compile(New With {.mode = 2})
+        Assert.Equal(ans2.Trim(),
+"SELECT
+    *
+FROM
+    TEST_TABLE2")
+
+        Dim ans3 = query.Compile(New With {.mode = 3})
+        Assert.Equal(ans3.Trim(),
+"SELECT
+    *
+FROM
+    TEST_TABLE0")
+    End Sub
+
+    <Fact>
     Public Sub TrimTest()
         Dim ans1 = "{trim}   a = #{12 * 13}   {end trim}".Compile()
         Assert.Equal(ans1, "   a = 156   ")

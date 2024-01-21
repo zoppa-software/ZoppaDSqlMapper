@@ -62,7 +62,7 @@ PRIMARY KEY(name)
         Dim ansZodiacs = Me.mSQLite.ExecuteRecords(Of Zodiac)(
             "select name, jp_name, from_date, to_date from Zodiac"
         )
-        Assert.Equal(zodiacs, ansZodiacs.ToArray())
+        Assert.True(zodiacs.SequenceEqual(ansZodiacs.ToArray()))
 
         Dim ansCount = Me.mSQLite.ExecuteDatas(Of Long)(
             "select count(*) from Zodiac"
@@ -78,7 +78,7 @@ PRIMARY KEY(name)
             "select name, jp_name, from_date, to_date from Zodiac where jp_name = @jname",
             New With {.jname = CType("双子座", DbString)}
         )
-        Assert.Equal(New Zodiac() {zodiacs(2)}, selZodiacs.ToArray())
+        Assert.True(New Zodiac() {zodiacs(2)}.SequenceEqual(selZodiacs.ToArray()))
 
         Dim tran3 = Me.mSQLite.BeginTransaction()
         Try
@@ -168,27 +168,24 @@ PRIMARY KEY(name)
             tran.Rollback()
         End Try
 
-        'Dim ansZodiacs As New PrimaryKeyList(Of Zodiac)()
-        Dim ansZodiacs = Me.mSQLite.ExecuteCustomRecords(Of Zodiac)(
+        Dim ansZodiacs = Me.mSQLite.ExecuteCreateRecords(Of Zodiac)(
             "select " &
             "  Person.Name, Person.birth_day, Zodiac.name, Zodiac.jp_name, Zodiac.from_date, Zodiac.to_date " &
             "from Person " &
             "left outer join Zodiac on " &
             "  Person.zodiac = Zodiac.name",
-            Function(prm, keys) As Zodiac
+            Function(prm)
+                Return {prm(2)}
+            End Function,
+            Sub(zdic, prm)
                 Dim pson = New Person(prm(0).ToString(), prm(2).ToString(), CDate(prm(1)))
-                Dim zdicKey = prm(2).ToString()
-
-                Dim registed = keys.SearchValue(zdicKey)
-                If registed.hasValue Then
-                    registed.value.Persons.Add(pson)
-                    Return Nothing
-                Else
-                    Dim zdic = New Zodiac(zdicKey, prm(3).ToString(), CDate(prm(4)), CDate(prm(5)))
-                    zdic.Persons.Add(pson)
-                    keys.Regist(zdic, zdicKey)
-                    Return zdic
-                End If
+                zdic.Persons.Add(pson)
+            End Sub,
+            Function(prm) As Zodiac
+                Dim pson = New Person(prm(0).ToString(), prm(2).ToString(), CDate(prm(1)))
+                Dim zdic = New Zodiac(prm(2).ToString(), prm(3).ToString(), CDate(prm(4)), CDate(prm(5)))
+                zdic.Persons.Add(pson)
+                Return zdic
             End Function
         ).ToDictionary(Function(v) v.Name, Function(v) v)
         Assert.Equal(ansZodiacs("Aries").Persons.Count, 3)

@@ -11,7 +11,9 @@ Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ZoppaDSqlTest", "ZoppaDSqlT
 EndProject
 Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ZoppaDSqlCompiler", "ZoppaDSqlCompiler\ZoppaDSqlCompiler.vbproj", "{1AE5C753-81A7-4873-B31F-209A14F52932}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "LexicalConsole", "LexicalConsole\LexicalConsole.vbproj", "{85A1C7ED-CFB5-497B-B1A6-75F35C586295}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "LexicalConsole", "LexicalConsole\LexicalConsole.vbproj", "{85A1C7ED-CFB5-497B-B1A6-75F35C586295}"
+EndProject
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "ZoppaLoggingExtensions", "..\ZoppaLoggingExtensions\ZoppaLoggingExtensions\ZoppaLoggingExtensions.vbproj", "{66563A38-9E44-4756-9BBB-8C0B5F67DC5F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{85A1C7ED-CFB5-497B-B1A6-75F35C586295}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{85A1C7ED-CFB5-497B-B1A6-75F35C586295}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{85A1C7ED-CFB5-497B-B1A6-75F35C586295}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66563A38-9E44-4756-9BBB-8C0B5F67DC5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66563A38-9E44-4756-9BBB-8C0B5F67DC5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66563A38-9E44-4756-9BBB-8C0B5F67DC5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66563A38-9E44-4756-9BBB-8C0B5F67DC5F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

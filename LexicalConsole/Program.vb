@@ -6,6 +6,20 @@ Module Program
 
     Sub Main(args As String())
         Using logFactory = ZoppaDSqlCompiler.CreateZoppaDSqlLogFactory(isConsole:=True, minimumLogLevel:=LogLevel.Trace)
+            Dim query4 = "" &
+"SELECT
+    *
+FROM
+{select mode}
+    {case 1}
+    TEST_TABLE1
+    {case 2}
+    TEST_TABLE2
+    {else}
+    TEST_TABLE0
+{/select}"
+            Dim ans4 = query4.Compile(New With {.mode = 2})
+
             Dim query1 = "" &
 "SELECT
     {trim}
@@ -39,6 +53,8 @@ where
             Next
 
             Dim a301 = "100 = 100".Executes().Contents
+
+
         End Using
     End Sub
 

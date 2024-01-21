@@ -38,24 +38,20 @@ LEFT OUTER JOIN albums ON
 ORDER BY
     artists.ArtistId";
 
-    var ans2 = sqlite.ExecuteCustomRecords<Artist>(
-        query2, 
-        (valus, primaries) => {
-            var registed = primaries.SearchValue((long?)valus[0]);
-            if (registed.hasValue) {
-                if (valus[2] != null) {
-                    registed.value.Albums.Add(new Album((long)valus[2], (string)valus[3], (long)valus[0]));
-                }
-                return null!;
+    var ans2 = sqlite.ExecuteCreateRecords<Artist>(
+        query2,
+        (fields) => [ fields[0] ],  // キーを取得
+        (registed, fields) => {     // 既に登録されている場合の処理
+            if (fields[2] != null) {
+                registed.Albums.Add(new Album((long)fields[2], (string)fields[3], (long)fields[0]));
             }
-            else {
-                var artist = new Artist((long)valus[0], (string)valus[1]);
-                if (valus[2] != null) {
-                    artist.Albums.Add(new Album((long)valus[2], (string)valus[3], (long)valus[0]));
-                }
-                primaries.Regist(artist, artist.ArtistId);
-                return artist;
+        },
+        (fields) => {               // 未登録の場合の処理
+            var artist = new Artist((long)fields[0], (string)fields[1]);
+            if (fields[2] != null) {
+                artist.Albums.Add(new Album((long)fields[2], (string)fields[3], (long)fields[0]));
             }
+            return artist;
         }
     );
     foreach (var v in ans2) {

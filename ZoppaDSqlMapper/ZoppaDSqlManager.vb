@@ -721,11 +721,11 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Function ExecuteRecords(Of T)(setting As Settings,
-                                         query As String,
-                                         dynamicParameter As Object,
-                                         sqlParameter As IEnumerable(Of Object),
-                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
+    Public Function ExecuteCustomRecords(Of T)(setting As Settings,
+                                               query As String,
+                                               dynamicParameter As Object,
+                                               sqlParameter As IEnumerable(Of Object),
+                                               createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
         Using scope = _logger.Value?.BeginScope(NameOf(ExecuteRecords))
             Try
                 _logger.Value?.LogDebug("Execute SQL : {query}", query)
@@ -801,14 +801,14 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Async Function ExecuteRecordsSync(Of T)(setting As Settings,
-                                                   query As String,
-                                                   dynamicParameter As Object,
-                                                   sqlParameter As IEnumerable(Of Object),
-                                                   createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
+    Public Async Function ExecuteCustomRecordsSync(Of T)(setting As Settings,
+                                                         query As String,
+                                                         dynamicParameter As Object,
+                                                         sqlParameter As IEnumerable(Of Object),
+                                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(setting, query, dynamicParameter, sqlParameter, createrMethod)
+                Return ExecuteCustomRecords(Of T)(setting, query, dynamicParameter, sqlParameter, createrMethod)
             End Function
         )
     End Function
@@ -822,12 +822,12 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Function ExecuteRecords(Of T)(connect As IDbConnection,
-                                         query As String,
-                                         dynamicParameter As Object,
-                                         sqlParameter As IEnumerable(Of Object),
-                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, sqlParameter, createrMethod)
+    Public Function ExecuteCustomRecords(Of T)(connect As IDbConnection,
+                                               query As String,
+                                               dynamicParameter As Object,
+                                               sqlParameter As IEnumerable(Of Object),
+                                               createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
+        Return ExecuteCustomRecords(Of T)(New Settings(connect), query, dynamicParameter, sqlParameter, createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -839,14 +839,14 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Async Function ExecuteRecordsSync(Of T)(connect As IDbConnection,
-                                                   query As String,
-                                                   dynamicParameter As Object,
-                                                   sqlParameter As IEnumerable(Of Object),
-                                                   createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
+    Public Async Function ExecuteCustomRecordsSync(Of T)(connect As IDbConnection,
+                                                         query As String,
+                                                         dynamicParameter As Object,
+                                                         sqlParameter As IEnumerable(Of Object),
+                                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, sqlParameter, createrMethod)
+                Return ExecuteCustomRecords(Of T)(New Settings(connect), query, dynamicParameter, sqlParameter, createrMethod)
             End Function
         )
     End Function
@@ -859,11 +859,11 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Function ExecuteRecords(Of T)(setting As Settings,
-                                         query As String,
-                                         dynamicParameter As Object,
-                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
+    Public Function ExecuteCustomRecords(Of T)(setting As Settings,
+                                               query As String,
+                                               dynamicParameter As Object,
+                                               createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
+        Return ExecuteCustomRecords(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -874,13 +874,13 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Async Function ExecuteRecordsSync(Of T)(setting As Settings,
-                                                   query As String,
-                                                   dynamicParameter As Object,
-                                                   createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
+    Public Async Function ExecuteCustomRecordsSync(Of T)(setting As Settings,
+                                                         query As String,
+                                                         dynamicParameter As Object,
+                                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
+                Return ExecuteCustomRecords(Of T)(setting, query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
             End Function
         )
     End Function
@@ -893,11 +893,11 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Function ExecuteRecords(Of T)(connect As IDbConnection,
-                                         query As String,
-                                         dynamicParameter As Object,
-                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
+    Public Function ExecuteCustomRecords(Of T)(connect As IDbConnection,
+                                               query As String,
+                                               dynamicParameter As Object,
+                                               createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
+        Return ExecuteCustomRecords(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -908,13 +908,13 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Async Function ExecuteRecordsSync(Of T)(connect As IDbConnection,
-                                                   query As String,
-                                                   dynamicParameter As Object,
-                                                   createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
+    Public Async Function ExecuteCustomRecordsSync(Of T)(connect As IDbConnection,
+                                                         query As String,
+                                                         dynamicParameter As Object,
+                                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
+                Return ExecuteCustomRecords(Of T)(New Settings(connect), query, dynamicParameter, Array.Empty(Of Object)(), createrMethod)
             End Function
         )
     End Function
@@ -928,11 +928,11 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Function ExecuteRecords(Of T)(setting As Settings,
-                                         query As String,
-                                         sqlParameter As IEnumerable(Of Object),
-                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(setting, query, Nothing, sqlParameter, createrMethod)
+    Public Function ExecuteCustomRecords(Of T)(setting As Settings,
+                                               query As String,
+                                               sqlParameter As IEnumerable(Of Object),
+                                               createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
+        Return ExecuteCustomRecords(Of T)(setting, query, Nothing, sqlParameter, createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -944,13 +944,13 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Async Function ExecuteRecordsSync(Of T)(setting As Settings,
-                                                   query As String,
-                                                   sqlParameter As IEnumerable(Of Object),
-                                                   createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
+    Public Async Function ExecuteCustomRecordsSync(Of T)(setting As Settings,
+                                                         query As String,
+                                                         sqlParameter As IEnumerable(Of Object),
+                                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(setting, query, Nothing, sqlParameter, createrMethod)
+                Return ExecuteCustomRecords(Of T)(setting, query, Nothing, sqlParameter, createrMethod)
             End Function
         )
     End Function
@@ -964,11 +964,11 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Function ExecuteRecords(Of T)(connect As IDbConnection,
-                                         query As String,
-                                         sqlParameter As IEnumerable(Of Object),
-                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, sqlParameter, createrMethod)
+    Public Function ExecuteCustomRecords(Of T)(connect As IDbConnection,
+                                               query As String,
+                                               sqlParameter As IEnumerable(Of Object),
+                                               createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
+        Return ExecuteCustomRecords(Of T)(New Settings(connect), query, Nothing, sqlParameter, createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -980,13 +980,13 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Async Function ExecuteRecordsSync(Of T)(connect As IDbConnection,
-                                                   query As String,
-                                                   sqlParameter As IEnumerable(Of Object),
-                                                   createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
+    Public Async Function ExecuteCustomRecordsSync(Of T)(connect As IDbConnection,
+                                                         query As String,
+                                                         sqlParameter As IEnumerable(Of Object),
+                                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, sqlParameter, createrMethod)
+                Return ExecuteCustomRecords(Of T)(New Settings(connect), query, Nothing, sqlParameter, createrMethod)
             End Function
         )
     End Function
@@ -998,10 +998,10 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Function ExecuteRecords(Of T)(setting As Settings,
-                                         query As String,
-                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(setting, query, Nothing, Array.Empty(Of Object)(), createrMethod)
+    Public Function ExecuteCustomRecords(Of T)(setting As Settings,
+                                               query As String,
+                                               createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
+        Return ExecuteCustomRecords(Of T)(setting, query, Nothing, Array.Empty(Of Object)(), createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -1011,12 +1011,12 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Async Function ExecuteRecordsSync(Of T)(setting As Settings,
-                                                   query As String,
-                                                   createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
+    Public Async Function ExecuteCustomRecordsSync(Of T)(setting As Settings,
+                                                         query As String,
+                                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(setting, query, Nothing, Array.Empty(Of Object)(), createrMethod)
+                Return ExecuteCustomRecords(Of T)(setting, query, Nothing, Array.Empty(Of Object)(), createrMethod)
             End Function
         )
     End Function
@@ -1028,10 +1028,10 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Function ExecuteRecords(Of T)(connect As IDbConnection,
-                                         query As String,
-                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
-        Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)(), createrMethod)
+    Public Function ExecuteCustomRecords(Of T)(connect As IDbConnection,
+                                               query As String,
+                                               createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As List(Of T)
+        Return ExecuteCustomRecords(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)(), createrMethod)
     End Function
 
     ''' <summary>SQLクエリを実行し、指定の型のリストを取得します（非同期）</summary>
@@ -1041,12 +1041,12 @@ Public Module ZoppaDSqlManager
     ''' <param name="createrMethod">インスタンス生成式。</param>
     ''' <returns>実行結果。</returns>
     <Extension()>
-    Public Async Function ExecuteRecordsSync(Of T)(connect As IDbConnection,
-                                                   query As String,
-                                                   createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
+    Public Async Function ExecuteCustomRecordsSync(Of T)(connect As IDbConnection,
+                                                         query As String,
+                                                         createrMethod As Func(Of Object(), PrimaryKeyList(Of T), T)) As Task(Of List(Of T))
         Return Await Task.Run(
             Function()
-                Return ExecuteRecords(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)(), createrMethod)
+                Return ExecuteCustomRecords(Of T)(New Settings(connect), query, Nothing, Array.Empty(Of Object)(), createrMethod)
             End Function
         )
     End Function

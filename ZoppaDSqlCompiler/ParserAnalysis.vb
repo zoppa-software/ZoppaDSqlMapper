@@ -1,17 +1,12 @@
 ﻿Option Strict On
 Option Explicit On
 
-Imports System.IO
 Imports System.Text
 Imports ZoppaDSqlCompiler.Environments
 Imports ZoppaDSqlCompiler.Express
 Imports ZoppaDSqlCompiler.Tokens
 Imports ZoppaDSqlCompiler.TokenCollection
-Imports Microsoft.Extensions.Logging
-Imports System.Net.Http
 Imports System.Security.Cryptography
-Imports System.Diagnostics.CodeAnalysis
-Imports System.Runtime.CompilerServices
 
 ''' <summary>トークンを解析する。</summary>
 Friend Module ParserAnalysis
@@ -24,43 +19,50 @@ Friend Module ParserAnalysis
     Friend Function Replase(sqlQuery As String,
                             tokens As List(Of TokenPosition),
                             parameter As IEnvironmentValue) As String
-        Dim buffer As New StringBuilder()
-        ReplaseQuery(sqlQuery, New TokenStream(ooo(tokens)), parameter, buffer)
+        ' 改行単位で不要な空白トークンを削除
+        Dim remedTokens = RemoveSpaceCrLf(tokens)
 
-        Dim res As New StringBuilder(buffer.Length)
-        Dim lines = buffer.ToString().Split(Environment.NewLine)
-        For i As Integer = 0 To lines.Length - 2
-            If lines(i).Trim() <> "" Then
-                res.AppendLine(lines(i))
-            End If
-        Next
-        If lines(lines.Length - 1).Trim() <> "" Then
-            res.Append(lines(lines.Length - 1))
-        End If
-        Return res.ToString()
+        ' SQLの置き換えを実施
+        Dim buffer As New StringBuilder()
+        ReplaseQuery(sqlQuery, New TokenStream(remedTokens), parameter, buffer)
+
+        ' 空白行を削除
+        Return RemoveSpaceLine(buffer).ToString()
     End Function
 
-    Private Function ooo(srcTokens As List(Of TokenPosition)) As List(Of TokenPosition)
+#Region "ajust token list"
+
+    ''' <summary>改行単位で不要な空白トークンを削除します。</summary>
+    ''' <param name="srcTokens">トークンリスト。</param>
+    ''' <returns>空白を取り除いたトークンリスト。</returns>
+    Private Function RemoveSpaceCrLf(srcTokens As List(Of TokenPosition)) As List(Of TokenPosition)
         Dim res As New List(Of TokenPosition)
 
-        Dim pointer As New TokenStream(srcTokens)
         Dim buffer As New List(Of TokenPosition)
+
+        ' 改行単位でトークンを収集して調整する
+        Dim pointer As New TokenStream(srcTokens)
         Do While pointer.HasNext
             buffer.Add(pointer.Current)
 
+            ' 改行を見つけたので調整する
             If pointer.Current.IsCrLf Then
-                oo2(res, buffer)
+                AjustLineTokens(res, buffer)
                 buffer.Clear()
             End If
 
             pointer.Move(1)
         Loop
 
-        oo2(res, buffer)
+        AjustLineTokens(res, buffer)
         Return res
     End Function
 
-    Private Sub oo2(res As List(Of TokenPosition), buffer As List(Of TokenPosition))
+    ''' <summary>改行単位の空白削除を実施します。</summary>
+    ''' <param name="res">戻り値のトークンリスト。</param>
+    ''' <param name="buffer">調整対象のトークンリスト</param>
+    Private Sub AjustLineTokens(res As List(Of TokenPosition), buffer As List(Of TokenPosition))
+        ' 直接トークン、置き換えトークンを含む行か判定
         Dim rep = False
         For i As Integer = 0 To buffer.Count - 1
             If Not buffer(i).IsWhiteSpace AndAlso Not buffer(i).IsCrLf Then
@@ -73,13 +75,18 @@ Friend Module ParserAnalysis
         Next
 
         If rep Then
+            ' 直接トークン、置き換えトークンを含む行はそのまま追加
             res.AddRange(buffer)
         Else
+            ' 直接トークン、置き換えトークンを含まない行は前方の空白トークンを削除して追加
+            '
+            ' 1. 直前の行の末尾の改行を削除
+            ' 2. 前方の空白を削除
             For i As Integer = 0 To buffer.Count - 1
                 If Not buffer(i).IsWhiteSpace Then
-                    If res.Count > 0 Then res.RemoveAt(res.Count - 1)
+                    If res.Count > 0 Then res.RemoveAt(res.Count - 1)   ' 1
 
-                    For j As Integer = i To buffer.Count - 1
+                    For j As Integer = i To buffer.Count - 1            ' 2
                         res.Add(buffer(j))
                     Next
                     Exit For
@@ -87,6 +94,31 @@ Friend Module ParserAnalysis
             Next
         End If
     End Sub
+
+    ''' <summary>空白行を削除します。</summary>
+    ''' <param name="buffer">対象バッファ。</param>
+    ''' <returns>空白行を削除したバッファ。</returns>
+    Private Function RemoveSpaceLine(buffer As StringBuilder) As StringBuilder
+        Dim res As New StringBuilder(buffer.Length)
+
+        ' 改行単位で分割
+        Dim lines = buffer.ToString().Split(Environment.NewLine)
+
+        ' 空白行以外を追加
+        For i As Integer = 0 To lines.Length - 2
+            If lines(i).Trim() <> "" Then
+                res.AppendLine(lines(i))
+            End If
+        Next
+
+        ' 最終行を追加
+        If lines(lines.Length - 1).Trim() <> "" Then
+            res.Append(lines(lines.Length - 1))
+        End If
+        Return res
+    End Function
+
+#End Region
 
     ''' <summary>SQLの置き換えを実施します。</summary>
     ''' <param name="sqlQuery">元のSQL。</param>
@@ -131,8 +163,8 @@ Friend Module ParserAnalysis
 
                 Case GetType(SelectToken)
                     reader.Move(1)
-                    Dim forTokens = CollectBlockToken(sqlQuery, reader, GetType(ForEachToken), GetType(EndForToken))
-                    EvaluationFor(sqlQuery, tkn.GetToken(Of ForEachToken)(), forTokens, buffer, parameter)
+                    Dim selTokens = CollectBlockToken(sqlQuery, reader, GetType(SelectToken), GetType(EndSelectToken))
+                    EvaluationSelect(sqlQuery, tkn.GetToken(Of SelectToken)(), selTokens, buffer, parameter)
 
                 Case GetType(CaseToken), GetType(EndSelectToken)
                     Throw New DSqlAnalysisException($"selectが開始されていません。{vbCrLf}{sqlQuery}:{tkn.Position}")
@@ -147,6 +179,8 @@ Friend Module ParserAnalysis
             End Select
         Loop
     End Sub
+
+#Region "token manage"
 
     ''' <summary>ブロックトークンを集めます。</summary>
     ''' <param name="sqlQuery">元のSQL。</param>
@@ -192,7 +226,6 @@ Friend Module ParserAnalysis
                              tokens As List(Of TokenPosition),
                              buffer As StringBuilder,
                              parameter As IEnvironmentValue)
-        ' If、ElseIf、Elseブロックを集める
         Dim blocks As New List(Of (condition As IToken, block As List(Of TokenPosition))) From {
             (sifToken, New List(Of TokenPosition)())
         }
@@ -289,6 +322,12 @@ Friend Module ParserAnalysis
         Next
     End Sub
 
+    ''' <summary>Trimを評価します。</summary>
+    ''' <param name="sqlQuery">元のSQL。</param>
+    ''' <param name="strimToken">Trimのトークンリスト。</param>
+    ''' <param name="tokens">ブロック内のトークンリスト。</param>
+    ''' <param name="buffer">結果バッファ。</param>
+    ''' <param name="parameter">パラメータ。</param>
     Private Sub EvaluationTrim(sqlQuery As String,
                                strimToken As TrimToken,
                                tokens As List(Of TokenPosition),
@@ -318,6 +357,71 @@ Friend Module ParserAnalysis
         End If
 
         buffer.Append(tarStr)
+    End Sub
+
+    ''' <summary>Selectを評価します。</summary>
+    ''' <param name="sqlQuery">元のSQL。</param>
+    ''' <param name="sifToken">Ifのトークンリスト。</param>
+    ''' <param name="tokens">ブロック内のトークンリスト。</param>
+    ''' <param name="buffer">結果バッファ。</param>
+    ''' <param name="parameter">パラメータ。</param>
+    Private Sub EvaluationSelect(sqlQuery As String,
+                                 sifToken As IToken,
+                                 tokens As List(Of TokenPosition),
+                                 buffer As StringBuilder,
+                                 parameter As IEnvironmentValue)
+        Dim blocks As New List(Of (condition As IToken, block As List(Of TokenPosition))) From {
+            (sifToken, New List(Of TokenPosition)())
+        }
+
+        ' Select、Case、Elseブロックを集める
+        Dim nest As Integer = 0
+        For Each tkn In tokens
+            Select Case tkn.TokenType
+                Case GetType(SelectToken)
+                    nest += 1
+
+                Case GetType(CaseToken)
+                    If nest = 0 Then
+                        blocks.Add((tkn.GetToken(Of CaseToken), New List(Of TokenPosition)()))
+                    End If
+
+                Case GetType(ElseToken)
+                    If nest = 0 Then
+                        blocks.Add((tkn.GetToken(Of ElseToken), New List(Of TokenPosition)()))
+                    End If
+
+                Case GetType(EndSelectToken)
+                    If nest = 0 Then
+                        Exit For
+                    Else
+                        nest -= 1
+                    End If
+
+                Case Else
+                    blocks(blocks.Count - 1).block.Add(tkn)
+            End Select
+        Next
+
+        ' Select、Case、Elseブロックを評価
+        Dim lclbuf As New StringBuilder()
+        For Each tkn In blocks
+            Select Case tkn.condition.TokenType
+                Case GetType(IfToken), GetType(ElseIfToken)
+                    ' 条件を評価して真ならば、ブロックを出力
+                    Dim ifans = Executes(DirectCast(tkn.condition, ICommandToken).CommandTokens, parameter)
+                    If TypeOf ifans.Contents Is Boolean AndAlso CBool(ifans.Contents) Then
+                        Dim tkns As New List(Of TokenPosition)(tkn.block)
+                        ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
+                        Exit For
+                    End If
+
+                Case GetType(ElseToken)
+                    Dim tkns As New List(Of TokenPosition)(tkn.block)
+                    ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
+            End Select
+        Next
+        buffer.Append(lclbuf.ToString())
     End Sub
 
     ''' <summary>パラメータ値を参照して取得します。</summary>
@@ -354,6 +458,8 @@ Friend Module ParserAnalysis
             Return refObj.ToString()
         End If
     End Function
+
+#End Region
 
     ''' <summary>式を解析して結果を取得します。</summary>
     ''' <param name="tokens">対象トークン。。</param>
@@ -418,6 +524,8 @@ Friend Module ParserAnalysis
         Loop
         Return New ParenExpress(nxtParser.Parser(New TokenStream(tmp)))
     End Function
+
+#Region "express classes"
 
     ''' <summary>評価部分ポインタです。</summary>
     Private NotInheritable Class EvaPartsPointer
@@ -775,5 +883,7 @@ Friend Module ParserAnalysis
         End Function
 
     End Class
+
+#End Region
 
 End Module

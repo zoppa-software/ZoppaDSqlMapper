@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <RootNamespace>ZoppaDSql</RootNamespace>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>

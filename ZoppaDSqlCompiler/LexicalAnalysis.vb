@@ -113,26 +113,26 @@ Friend Module LexicalAnalysis
         End If
     End Sub
 
-    ''''' <summary>直接出力するクエリトークンを生成します。</summary>
-    ''''' <param name="buffer">文字列バッファ。</param>
-    ''''' <returns>クエリトークン。</returns>
-    ''' <summary>
-    ''' 
-    ''' </summary>
+    ''' <summary>直接出力するクエリトークンを生成します。</summary>
     ''' <param name="buffer">文字列バッファ。</param>
-    ''' <param name="startPos"></param>
-    ''' <returns></returns>
+    ''' <param name="startPos">トークンの最初の文字位置。</param>
+    ''' <returns>直接出力するクエリトークンを生成します。</returns>
     <Extension>
     Private Function CreateQueryTokens(buffer As StringBuilder, startPos As Integer) As List(Of TokenPosition)
         Dim res As New List(Of TokenPosition)
         If buffer.Length > 0 Then
+            ' 一文字目の文字種を取得
             Dim preKind = QueryToken.GetCharKind(buffer(0))
+
+            ' 一文字目をバッファに追加
             Dim buf As New StringBuilder()
             buf.Append(buffer(0))
 
+            ' 文字種の変わり目でトークンを分割
             For i As Integer = 1 To buffer.Length - 1
                 Dim kind = QueryToken.GetCharKind(buffer(i))
 
+                ' 文字種が変わったのでトークンを分割
                 If kind <> preKind Then
                     res.Add(New TokenPosition(New QueryToken(buf.ToString(), preKind), startPos))
                     buf.Clear()
@@ -513,17 +513,6 @@ Friend Module LexicalAnalysis
         Public Sub Move(moveAmount As Integer)
             Me.mPointer += moveAmount
         End Sub
-
-        '''' <summary>カレント位置から指定文字数の文字列を取得します。</summary>
-        '''' <param name="len">文字数。</param>
-        '''' <returns>文字列。</returns>
-        'Public Function GetString(len As Integer) As String
-        '    Dim buf As New StringBuilder()
-        '    For i As Integer = Me.mPointer To Me.mPointer + len - 1
-        '        buf.Append(Me.mChars(i))
-        '    Next
-        '    Return buf.ToString()
-        'End Function
 
     End Class
 

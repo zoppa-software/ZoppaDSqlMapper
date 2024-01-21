@@ -38,7 +38,7 @@ LEFT OUTER JOIN albums ON
 ORDER BY
     artists.ArtistId";
 
-    var ans2 = sqlite.ExecuteRecords<Artist>(
+    var ans2 = sqlite.ExecuteCustomRecords<Artist>(
         query2, 
         (valus, primaries) => {
             var registed = primaries.SearchValue((long?)valus[0]);

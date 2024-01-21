@@ -1,5 +1,6 @@
 ﻿Option Strict On
 Option Explicit On
+Imports ZoppaDSqlCompiler.Tokens
 
 Namespace TokenCollection
 
@@ -10,19 +11,19 @@ Namespace TokenCollection
         Private mPointer As Integer
 
         ''' <summary>入力トークン。</summary>
-        Private mTokens As TokenPosition()
+        Private ReadOnly mTokens As List(Of TokenPosition)
 
         ''' <summary>読み込みの終了していない文字があれば真を返す。</summary>
         Public ReadOnly Property HasNext As Boolean
             Get
-                Return (Me.mPointer < If(Me.mTokens?.Length, 0))
+                Return (Me.mPointer < If(Me.mTokens?.Count, 0))
             End Get
         End Property
 
         ''' <summary>カレント文字を返す。</summary>
         Public ReadOnly Property Current As TokenPosition
             Get
-                Return If(Me.mPointer < If(Me.mTokens?.Length, 0), Me.mTokens(Me.mPointer), Nothing)
+                Return If(Me.mPointer < If(Me.mTokens?.Count, 0), Me.mTokens(Me.mPointer), Nothing)
             End Get
         End Property
 
@@ -30,7 +31,7 @@ Namespace TokenCollection
         ''' <param name="inputtkn">入力トークン。</param>
         Public Sub New(inputtkn As IEnumerable(Of TokenPosition))
             Me.mPointer = 0
-            Me.mTokens = inputtkn.ToArray()
+            Me.mTokens = inputtkn.ToList()
         End Sub
 
         ''' <summary>カレント位置を移動させる。</summary>

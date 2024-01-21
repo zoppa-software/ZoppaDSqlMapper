@@ -18,11 +18,11 @@ Namespace Tokens
             End Get
         End Property
 
-        ''' <summary>トークン名を取得する。</summary>
-        ''' <returns>トークン名。</returns>
-        Public ReadOnly Property TokenName As String Implements IToken.TokenName
+        ''' <summary>トークン型を取得する。</summary>
+        ''' <returns>トークン型。</returns>
+        Public ReadOnly Property TokenType As Type Implements IToken.TokenType
             Get
-                Return NameOf(SpaceToken)
+                Return GetType(SpaceToken)
             End Get
         End Property
 

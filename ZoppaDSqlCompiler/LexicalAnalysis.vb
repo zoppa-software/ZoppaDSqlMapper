@@ -22,6 +22,9 @@ Friend Module LexicalAnalysis
         ''' <summary>置き換えトークン。</summary>
         REPLASE_TKN
 
+        ''' <summary>置き換えトークン。</summary>
+        REPLASE_TKN_ESC
+
     End Enum
 
     ''' <summary>文字列をトークン解析します。</summary>
@@ -40,7 +43,7 @@ Friend Module LexicalAnalysis
 
             Select Case c
                 Case "{"c
-                    tokens.AddIfNull(buffer.CreateQueryToken(), pos)
+                    tokens.AddRange(buffer.CreateQueryTokens(pos))
                     pos = reader.CurrentPosition
                     reader.Move(1)
                     tknType = TKN_TYPE.CODE_TKN
@@ -52,7 +55,9 @@ Friend Module LexicalAnalysis
                         Case TKN_TYPE.CODE_TKN
                             tokens.AddIfNull(buffer.CreateCodeToken(), pos)
                         Case TKN_TYPE.REPLASE_TKN
-                            tokens.AddIfNull(buffer.CreateReplaseToken(c = "#"c), pos)
+                            tokens.AddIfNull(buffer.CreateReplaseToken(False), pos)
+                        Case TKN_TYPE.REPLASE_TKN_ESC
+                            tokens.AddIfNull(buffer.CreateReplaseToken(True), pos)
                     End Select
                     pos = reader.CurrentPosition
                     reader.Move(1)
@@ -60,10 +65,10 @@ Friend Module LexicalAnalysis
 
                 Case "#"c, "!"c, "$"c
                     If reader.NestChar(1) = "{"c Then
-                        tokens.AddIfNull(buffer.CreateQueryToken(), pos)
+                        tokens.AddRange(buffer.CreateQueryTokens(pos))
                         pos = reader.CurrentPosition
                         reader.Move(2)
-                        tknType = TKN_TYPE.REPLASE_TKN
+                        tknType = If(c <> "#", TKN_TYPE.REPLASE_TKN, TKN_TYPE.REPLASE_TKN_ESC)
                     Else
                         buffer.Append(c)
                         reader.Move(1)
@@ -87,16 +92,20 @@ Friend Module LexicalAnalysis
 
         Select Case tknType
             Case TKN_TYPE.QUERY_TKN
-                tokens.AddIfNull(buffer.CreateQueryToken(), pos)
+                tokens.AddRange(buffer.CreateQueryTokens(pos))
             Case TKN_TYPE.CODE_TKN
                 Throw New DSqlAnalysisException("コードトークンが閉じられていません")
-            Case TKN_TYPE.REPLASE_TKN
+            Case TKN_TYPE.REPLASE_TKN, TKN_TYPE.REPLASE_TKN_ESC
                 Throw New DSqlAnalysisException("置き換えトークンが閉じられていません")
         End Select
 
         Return tokens
     End Function
 
+    ''' <summary>トークンリストにトークンを追加します(Nullを除く)</summary>
+    ''' <param name="tokens">トークンリスト。</param>
+    ''' <param name="token">追加するトークン。</param>
+    ''' <param name="pos">トークン位置。</param>
     <Extension>
     Private Sub AddIfNull(tokens As List(Of TokenPosition), token As IToken, pos As Integer)
         If token IsNot Nothing Then
@@ -104,16 +113,39 @@ Friend Module LexicalAnalysis
         End If
     End Sub
 
-    ''' <summary>直接出力するクエリトークンを生成します。</summary>
+    ''''' <summary>直接出力するクエリトークンを生成します。</summary>
+    ''''' <param name="buffer">文字列バッファ。</param>
+    ''''' <returns>クエリトークン。</returns>
+    ''' <summary>
+    ''' 
+    ''' </summary>
     ''' <param name="buffer">文字列バッファ。</param>
-    ''' <returns>クエリトークン。</returns>
+    ''' <param name="startPos"></param>
+    ''' <returns></returns>
     <Extension>
-    Private Function CreateQueryToken(buffer As StringBuilder) As IToken
-        Dim res As IToken = Nothing
+    Private Function CreateQueryTokens(buffer As StringBuilder, startPos As Integer) As List(Of TokenPosition)
+        Dim res As New List(Of TokenPosition)
         If buffer.Length > 0 Then
-            res = New QueryToken(buffer.ToString())
-            buffer.Clear()
+            Dim preKind = QueryToken.GetCharKind(buffer(0))
+            Dim buf As New StringBuilder()
+            buf.Append(buffer(0))
+
+            For i As Integer = 1 To buffer.Length - 1
+                Dim kind = QueryToken.GetCharKind(buffer(i))
+
+                If kind <> preKind Then
+                    res.Add(New TokenPosition(New QueryToken(buf.ToString(), preKind), startPos))
+                    buf.Clear()
+                    startPos = i
+                    preKind = kind
+                End If
+
+                buf.Append(buffer(i))
+            Next
+            res.Add(New TokenPosition(New QueryToken(buf.ToString(), preKind), startPos))
         End If
+
+        buffer.Clear()
         Return res
     End Function
 
@@ -124,7 +156,7 @@ Friend Module LexicalAnalysis
     Private Function CreateCodeToken(buffer As StringBuilder) As IToken
         Dim codeStr = buffer.ToString().Trim()
         buffer.Clear()
-        Dim lowStr = If(codeStr.Length > 9, codeStr.Substring(0, 9), codeStr).ToLower()
+        Dim lowStr = If(codeStr.Length > 10, codeStr.Substring(0, 10), codeStr).ToLower()
 
         If lowStr.StartsWith("if ") Then
             Return New IfToken(SplitToken(codeStr.Substring(3)))
@@ -134,18 +166,36 @@ Friend Module LexicalAnalysis
             Return ElseToken.Value
         ElseIf lowStr.StartsWith("end if") Then
             Return EndIfToken.Value
+        ElseIf lowStr.StartsWith("/if") Then
+            Return EndIfToken.Value
         ElseIf lowStr.StartsWith("for each ") Then
             Return New ForEachToken(SplitToken(codeStr.Substring(9)))
         ElseIf lowStr.StartsWith("foreach ") Then
             Return New ForEachToken(SplitToken(codeStr.Substring(8)))
         ElseIf lowStr.StartsWith("end for") Then
             Return EndForToken.Value
+        ElseIf lowStr.StartsWith("/for") Then
+            Return EndForToken.Value
+        ElseIf lowStr.StartsWith("trim both ") Then
+            Return New TrimToken(True, codeStr.Substring(9))
+        ElseIf lowStr.StartsWith("trim both") Then
+            Return New TrimToken(True)
         ElseIf lowStr.StartsWith("trim ") Then
-            Return New TrimToken(codeStr.Substring(5))
+            Return New TrimToken(False, codeStr.Substring(5))
         ElseIf lowStr.StartsWith("trim") Then
-            Return New TrimToken()
+            Return New TrimToken(False)
         ElseIf lowStr.StartsWith("end trim") Then
             Return EndTrimToken.Value
+        ElseIf lowStr.StartsWith("/trim") Then
+            Return EndTrimToken.Value
+        ElseIf lowStr.StartsWith("select ") Then
+            Return New SelectToken(SplitToken(codeStr.Substring(7)))
+        ElseIf lowStr.StartsWith("case ") Then
+            Return New CaseToken(SplitToken(codeStr.Substring(5)))
+        ElseIf lowStr.StartsWith("end select") Then
+            Return EndSelectToken.Value
+        ElseIf lowStr.StartsWith("/select") Then
+            Return EndSelectToken.Value
         End If
         Return Nothing
     End Function
@@ -242,6 +292,9 @@ Friend Module LexicalAnalysis
                     reader.Move(1)
                 ElseIf reader.EqualKeyword("!") Then
                     tokens.Add(New TokenPosition(NotToken.Value, pos))
+                    reader.Move(1)
+                ElseIf reader.EqualKeyword(",") Then
+                    tokens.Add(New TokenPosition(CommaToken.Value, pos))
                     reader.Move(1)
                 ElseIf c = "#"c Then
                     tokens.Add(New TokenPosition(CreateDateToken(reader), pos))

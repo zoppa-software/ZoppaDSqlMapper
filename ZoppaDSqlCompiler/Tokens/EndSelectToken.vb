@@ -1,18 +1,17 @@
 ﻿Option Strict On
 Option Explicit On
-Imports ZoppaDSqlCompiler.Express
 
 Namespace Tokens
 
-    ''' <summary>乗算トークン。</summary>
-    Public NotInheritable Class MultiToken
-        Implements IToken
+    ''' <summary>EndSelectトークン。</summary>
+    Public NotInheritable Class EndSelectToken
+        Implements IToken, IControlToken
 
         ''' <summary>遅延インスタンス生成プロパティ。</summary>
-        Private Shared ReadOnly Property LazyInstance() As New Lazy(Of MultiToken)(Function() New MultiToken())
+        Private Shared ReadOnly Property LazyInstance() As New Lazy(Of EndSelectToken)(Function() New EndSelectToken())
 
         ''' <summary>唯一のインスタンスを返します。</summary>
-        Public Shared ReadOnly Property Value() As MultiToken
+        Public Shared ReadOnly Property Value() As EndSelectToken
             Get
                 Return LazyInstance.Value
             End Get
@@ -30,7 +29,7 @@ Namespace Tokens
         ''' <returns>トークン型。</returns>
         Public ReadOnly Property TokenType As Type Implements IToken.TokenType
             Get
-                Return GetType(MultiToken)
+                Return GetType(EndSelectToken)
             End Get
         End Property
 
@@ -58,10 +57,9 @@ Namespace Tokens
         ''' <summary>文字列条件を取得します。</summary>
         ''' <returns>文字列表現。</returns>
         Public Overrides Function ToString() As String
-            Return "*"
+            Return "End Select"
         End Function
 
     End Class
 
 End Namespace
-

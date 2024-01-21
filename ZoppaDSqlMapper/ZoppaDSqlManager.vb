@@ -370,7 +370,7 @@ Public Module ZoppaDSqlManager
                     If(i < columTypes.Count - 1, ",", "")
                 )
             Next
-            Throw New ZoppaDSqlException($"There is no constructor that matches the retrieved data:{info}")
+            Throw New ZoppaDSqlException($"引数が一致するコンストラクタがありません:{info}")
         End If
     End Function
 

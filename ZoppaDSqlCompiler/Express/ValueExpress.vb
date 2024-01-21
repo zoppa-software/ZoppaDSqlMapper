@@ -28,8 +28,8 @@ Namespace Express
         ''' <param name="env">環境値情報。</param>
         ''' <returns>実行結果。</returns>
         Public Function Executes(env As IEnvironmentValue) As IToken Implements IExpression.Executes
-            Select Case Me.mToken.TokenName
-                Case NameOf(IdentToken)
+            Select Case Me.mToken.TokenType
+                Case GetType(IdentToken)
                     Dim obj = env.GetValue(If(Me.mToken.Contents?.ToString(), ""))
                     If TypeOf obj Is String Then
                         Return New StringToken(obj.ToString())
@@ -57,8 +57,8 @@ Namespace Express
         ''' <summary>文字列条件を取得します。</summary>
         ''' <returns>文字列表現。</returns>
         Public Overrides Function ToString() As String
-            Select Case Me.mToken.TokenName
-                Case NameOf(IdentToken)
+            Select Case Me.mToken.TokenType
+                Case GetType(IdentToken)
                     Return $"expr:ident {If(Me.mToken?.Contents, "")}"
                 Case Else
                     Return $"expr:{If(Me.mToken?.Contents, "null")}"

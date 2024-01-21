@@ -42,6 +42,19 @@ Namespace Environments
             End Set
         End Property
 
+        ''' <summary>コピーコンストラクタ。</summary>
+        ''' <param name="other">コピー元。</param>
+        Private Sub New(other As EnvironmentObjectValue)
+            Me.mType = other.mType
+            Me.mTarget = other.mTarget
+            Me.mPropDic = other.mPropDic
+            Me.mVariants = New Dictionary(Of String, Object)(other.mVariants)
+            Me.Retrying = other.Retrying
+        End Sub
+
+        ''' <summary>コンストラクタ。</summary>
+        ''' <param name="type">パラメータの型。</param>
+        ''' <param name="target">パラメータ。</param>
         ''' <summary>コンストラクタ。</summary>
         ''' <param name="target">パラメータ。</param>
         Public Sub New(target As Object)
@@ -100,6 +113,12 @@ Namespace Environments
                     Return Me.mPropDic(name).GetValue(Me.mTarget)
                 End If
             End If
+        End Function
+
+        ''' <summary>環境値をコピーします。</summary>
+        ''' <returns>コピーされた環境値。</returns>
+        Public Function Clone() As IEnvironmentValue Implements IEnvironmentValue.Clone
+            Return New EnvironmentObjectValue(Me)
         End Function
 
     End Class

@@ -22,11 +22,11 @@ Namespace TokenCollection
             End Get
         End Property
 
-        ''' <summary>トークン名を取得する。</summary>
-        ''' <returns>トークン名。</returns>
-        Public ReadOnly Property TokenName As String
+        ''' <summary>トークン型を取得する。</summary>
+        ''' <returns>トークン型。</returns>
+        Public ReadOnly Property TokenType As Type
             Get
-                Return If(Me.mToken?.TokenName, "")
+                Return If(Me.mToken?.TokenType, Nothing)
             End Get
         End Property
 
@@ -35,6 +35,22 @@ Namespace TokenCollection
         Public ReadOnly Property IsControlToken As Boolean
             Get
                 Return TypeOf Me.mToken Is IControlToken
+            End Get
+        End Property
+
+        ''' <summary>トークンが空白文字ならば真を返します。</summary>
+        ''' <returns>トークンが空白文字ならば真。</returns>
+        Public ReadOnly Property IsWhiteSpace As Boolean
+            Get
+                Return Me.mToken.IsWhiteSpace
+            End Get
+        End Property
+
+        ''' <summary>トークンが改行文字ならば真を返します。</summary>
+        ''' <returns>トークンが改行文字ならば真。</returns>
+        Public ReadOnly Property IsCrLf As Boolean
+            Get
+                Return Me.mToken.IsCrLf
             End Get
         End Property
 
@@ -51,12 +67,6 @@ Namespace TokenCollection
         ''' <returns>トークン情報。</returns>
         Friend Function GetToken(Of T As {Class, IToken})() As T
             Return TryCast(Me.mToken, T)
-        End Function
-
-        ''' <summary>コマンドトークンを取得します。</summary>
-        ''' <returns>コマンドトークン。</returns>
-        Friend Function GetCommandToken() As ICommandToken
-            Return TryCast(Me.mToken, ICommandToken)
         End Function
 
         ''' <summary>文字列表現を取得する。</summary>

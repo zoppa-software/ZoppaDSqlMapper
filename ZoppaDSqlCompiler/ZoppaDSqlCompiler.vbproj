@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="TokenCollection\TokenHierarchy.vb" />
+    <Compile Remove="Tokens\SpaceToken.vb" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ZoppaLoggingExtensions" Version="0.9.0" />
   </ItemGroup>
 

@@ -33,22 +33,22 @@ Namespace Express
         Public Function Executes(env As IEnvironmentValue) As IToken Implements IExpression.Executes
             Dim tkn = Me.mValue?.Executes(env)
 
-            Select Case Me.mToken?.TokenName
-                Case NameOf(PlusToken)
-                    If tkn?.TokenName = NameOf(NumberToken) Then
+            Select Case Me.mToken?.TokenType
+                Case GetType(PlusToken)
+                    If tkn?.TokenType = GetType(NumberToken) Then
                         Return tkn
                     Else
                         Throw New DSqlAnalysisException("前置き+が数字の前に置かれていません")
                     End If
 
-                Case NameOf(MinusToken)
-                    If tkn?.TokenName = NameOf(NumberToken) Then
+                Case GetType(MinusToken)
+                    If tkn?.TokenType = GetType(NumberToken) Then
                         Return CType(tkn, NumberToken).SignChange()
                     Else
                         Throw New DSqlAnalysisException("前置き-が数字の前に置かれていません")
                     End If
 
-                Case NameOf(NotToken)
+                Case GetType(NotToken)
                     Dim bval = Convert.ToBoolean(tkn?.Contents)
                     Return If(bval, CType(FalseToken.Value, IToken), TrueToken.Value)
 

@@ -20,11 +20,11 @@ Namespace Tokens
             End Get
         End Property
 
-        ''' <summary>トークン名を取得する。</summary>
-        ''' <returns>トークン名。</returns>
-        Public ReadOnly Property TokenName As String Implements IToken.TokenName
+        ''' <summary>トークン型を取得する。</summary>
+        ''' <returns>トークン型。</returns>
+        Public ReadOnly Property TokenType As Type Implements IToken.TokenType
             Get
-                Return NameOf(ForEachToken)
+                Return GetType(ForEachToken)
             End Get
         End Property
 
@@ -33,6 +33,22 @@ Namespace Tokens
         Public ReadOnly Property CommandTokens As List(Of TokenPosition) Implements ICommandToken.CommandTokens
             Get
                 Return Me.mToken
+            End Get
+        End Property
+
+        ''' <summary>トークンが空白文字ならば真を返します。</summary>
+        ''' <returns>トークンが空白文字ならば真。</returns>
+        Public ReadOnly Property IsWhiteSpace As Boolean Implements IToken.IsWhiteSpace
+            Get
+                Return False
+            End Get
+        End Property
+
+        ''' <summary>トークンが改行文字ならば真を返します。</summary>
+        ''' <returns>トークンが改行文字ならば真。</returns>
+        Public ReadOnly Property IsCrLf As Boolean Implements IToken.IsCrLf
+            Get
+                Return False
             End Get
         End Property
 

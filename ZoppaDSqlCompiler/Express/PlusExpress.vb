@@ -39,7 +39,7 @@ Namespace Express
             Dim nmr = TryCast(tmr, NumberToken)
             If nml IsNot Nothing AndAlso nmr IsNot Nothing Then
                 Return nml.PlusComputation(nmr)
-            ElseIf tml?.TokenName = NameOf(StringToken) Then
+            ElseIf tml?.TokenType = GetType(StringToken) Then
                 Return New StringToken($"{tml.Contents}{If(tmr?.Contents, "null")}")
             Else
                 Try

@@ -19,6 +19,10 @@ Namespace Environments
         ''' <returns>値。</returns>
         Function GetValue(name As String) As Object
 
+        ''' <summary>環境値をコピーします。</summary>
+        ''' <returns>コピーされた環境値。</returns>
+        Function Clone() As IEnvironmentValue
+
     End Interface
 
 End Namespace

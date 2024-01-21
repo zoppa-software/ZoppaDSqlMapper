@@ -9,7 +9,6 @@ Imports System.Text
 Imports ZoppaDSqlCompiler.Tokens
 Imports ZoppaDSqlCompiler.Environments
 Imports ZoppaDSqlCompiler.TokenCollection
-Imports System.Linq.Expressions
 
 ''' <summary>DSql APIモジュール。</summary>
 Public Module ZoppaDSqlCompiler
@@ -37,7 +36,7 @@ Public Module ZoppaDSqlCompiler
     )
 
     ' コマンド履歴
-    Private _cmdHistory As New List(Of (String, List(Of TokenPosition)))
+    Private ReadOnly _cmdHistory As New List(Of (String, List(Of TokenPosition)))
 
     ''' <summary>ログ出力オブジェクトを取得します。</summary>
     ''' <returns>ログ出力オブジェクト。</returns>
@@ -158,6 +157,8 @@ Public Module ZoppaDSqlCompiler
         End If
     End Function
 
+    ''' <summary>トークンリストをログ出力します。</summary>
+    ''' <param name="tokens">トークンリスト。</param>
     Private Sub LoggingTokens(tokens As List(Of TokenPosition))
         Logger.Value?.LogTrace("token count : {tokens}", tokens.Count)
         If Logger.Value?.IsEnabled(LogLevel.Trace) Then
@@ -174,7 +175,8 @@ Public Module ZoppaDSqlCompiler
     ''' <param name="parameter">動的SQL、クエリパラメータ用の情報。</param>
     ''' <returns>コンパイル結果。</returns>
     <Extension>
-    Public Function Compile(sqlQuery As String, Optional parameter As Object = Nothing) As String
+    Public Function Compile(sqlQuery As String,
+                            Optional parameter As Object = Nothing) As String
         Using scope = _logger.Value?.BeginScope(NameOf(Compile))
             Try
                 Logger.Value?.LogDebug("compile sql : {sqlQuery}", sqlQuery)
@@ -185,49 +187,16 @@ Public Module ZoppaDSqlCompiler
                 LoggingTokens(tokens)
 
                 ' 評価
-                Dim ans = ParserAnalysis.Replase(tokens, New EnvironmentObjectValue(parameter))
+                Dim ans = ParserAnalysis.Replase(sqlQuery, tokens, New EnvironmentObjectValue(parameter))
                 Logger.Value?.LogDebug("answer compile sql : {ans}", ans)
+
+                Return ans
 
             Catch ex As Exception
                 _logger.Value?.LogError("message:{ex.Message} stack trace:{ex.StackTrace}", ex.Message, ex.StackTrace)
                 Throw
             End Try
-            'Try
-            '    LoggingDebug($"Compile SQL : {sqlQuery}")
-            '    LoggingParameter(parameter)
-            '    Dim ans = ParserAnalysis.Replase(sqlQuery, parameter)
-            '    LoggingDebug($"Answer SQL : {ans}")
-            '    Return ans
-            'Catch ex As Exception
-            '    LoggingError(ex.Message)
-            '    LoggingError(ex.StackTrace)
-            '    Throw
-            'End Try
         End Using
-    End Function
-
-    ''' <summary>あれば履歴からトークンリストを取得、なければ新規作成して履歴に追加します。</summary>
-    ''' <param name="sqlQuery">評価する文字列。</param>
-    ''' <returns>トークンリスト。</returns>
-    Private Function GetNewOrHistoryByCompile(sqlQuery As String) As List(Of TokenPosition)
-        SyncLock _cmdHistory
-            ' 履歴にあればぞれを返す
-            For i As Integer = 0 To _cmdHistory.Count - 1
-                If _cmdHistory(i).Item1 = sqlQuery Then
-                    Return _cmdHistory(i).Item2
-                End If
-            Next
-
-            ' 履歴になければ新規作成
-            Dim tokens = LexicalAnalysis.SplitToken(sqlQuery)
-            _cmdHistory.Add((sqlQuery, tokens))
-
-            If _cmdHistory.Count > MAX_HISTORY_SIZE Then
-                _cmdHistory.RemoveAt(0)
-            End If
-
-            Return tokens
-        End SyncLock
     End Function
 
     ''' <summary>引数の文字列を評価して値を取得します。</summary>

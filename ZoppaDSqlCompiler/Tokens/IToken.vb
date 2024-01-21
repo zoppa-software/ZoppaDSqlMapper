@@ -12,9 +12,17 @@ Namespace Tokens
         ''' <returns>格納値。</returns>
         ReadOnly Property Contents() As Object
 
-        ''' <summary>トークン名を取得する。</summary>
-        ''' <returns>トークン名。</returns>
-        ReadOnly Property TokenName As String
+        ''' <summary>トークン型を取得する。</summary>
+        ''' <returns>トークン型。</returns>
+        ReadOnly Property TokenType As Type
+
+        ''' <summary>トークンが空白文字ならば真を返します。</summary>
+        ''' <returns>トークンが空白文字ならば真。</returns>
+        ReadOnly Property IsWhiteSpace As Boolean
+
+        ''' <summary>トークンが改行文字ならば真を返します。</summary>
+        ''' <returns>トークンが改行文字ならば真。</returns>
+        ReadOnly Property IsCrLf As Boolean
 
     End Interface
 
@@ -27,7 +35,7 @@ Namespace Tokens
 
     End Interface
 
-    ''' <summary>コンソールマーカーインターフェイス。</summary>
+    ''' <summary>コントロールマーカーインターフェイス。</summary>
     Friend Interface IControlToken
 
     End Interface

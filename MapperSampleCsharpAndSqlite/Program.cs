@@ -9,6 +9,21 @@ using (var sqlite = new SQLiteConnection("Data Source=chinook.db")) {
     sqlite.Open();
 
     var query =
+@"select
+  albumid, title, name
+from
+  albums
+inner join artists on
+  albums.ArtistId = artists.ArtistId
+{trim}
+where
+  {if seachId <> 0} albums.ArtistId = @seachId{/if}
+{/trim}";
+
+    var answer = await sqlite.ExecuteRecordsSync<AlbumInfo>(query, new { seachId = 23 });
+
+
+    var query1 =
 @"SELECT
     AlbumId       -- AlbumId
     , Title       -- Title
@@ -20,7 +35,7 @@ WHERE
 ORDER BY
     ArtistId";
 
-    var ans = sqlite.ExecuteRecords<Album>(query, new { ArtistId = 23 });
+    var ans = sqlite.ExecuteRecords<Album>(query1, new { ArtistId = 23 });
     foreach (var v in ans) {
         Console.WriteLine("AlbumId={0}, AlbumTitle={1}, ArtistId={2}", v.AlbumId, v.Title, v.ArtistId);
     }
@@ -112,6 +127,17 @@ ORDER BY
 
         tran.Commit();
     }
+}
+
+//record class AlbumInfo(long AlbumId, string Title, string Name);
+
+class AlbumInfo(long albumId, string title, string name)
+{
+    public long AlbumId { get; } = albumId;
+
+    public string Title { get; } = title;
+
+    public string Name { get; } = name;
 }
 
 record class Album(long AlbumId, string Title, long ArtistId);

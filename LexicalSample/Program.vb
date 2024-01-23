@@ -54,6 +54,20 @@ where
 
             Dim a301 = "100 = 100".Executes().Contents
 
+            For i As Integer = 0 To 7
+                Dim answer = "" &
+"select * from employees 
+{trim}
+where
+    {trim both}
+        {if empNo}emp_no < 20000{/if} and
+        {trim}
+            ({trim both}{if first_name}first_name like 'A%'{/if} or {if gender}gender = 'F'{/if}{/trim})
+        {/trim}
+    {/trim}
+{/trim}
+limit 10".Replase(New With {.empNo = (i And 1) = 0, .first_name = (i And 2) = 0, .gender = (i And 4) = 0})
+            Next
         End Using
     End Sub
 

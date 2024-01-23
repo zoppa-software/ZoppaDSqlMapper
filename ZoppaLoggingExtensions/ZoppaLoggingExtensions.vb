@@ -415,7 +415,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <param name="message">ログメッセージのフォーマット文字列。例は <c>"User {User} logged in from {Address}"</param>
     ''' <param name="args">書式設定する 0 個以上のオブジェクトを含むオブジェクト配列。</param>
     <Extension()>
-    Private Sub Log(logger As LogWrapper, logLevel As LogLevel, message As String, ParamArray args() As Object)
+    Public Sub Log(logger As LogWrapper, logLevel As LogLevel, message As String, ParamArray args() As Object)
         Log(logger, logLevel, 0, Nothing, message, args)
     End Sub
 

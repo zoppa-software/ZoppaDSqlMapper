@@ -170,15 +170,20 @@ Friend Module ParserAnalysis
             Select Case tkn.TokenType
                 Case GetType(IfToken)
                     nest += 1
+                    blocks(blocks.Count - 1).block.Add(tkn)
 
                 Case GetType(ElseIfToken)
                     If nest = 0 Then
                         blocks.Add((tkn.GetToken(Of ElseIfToken), New List(Of TokenPosition)()))
+                    Else
+                        blocks(blocks.Count - 1).block.Add(tkn)
                     End If
 
                 Case GetType(ElseToken)
                     If nest = 0 Then
                         blocks.Add((tkn.GetToken(Of ElseToken), New List(Of TokenPosition)()))
+                    Else
+                        blocks(blocks.Count - 1).block.Add(tkn)
                     End If
 
                 Case GetType(EndIfToken)
@@ -186,6 +191,7 @@ Friend Module ParserAnalysis
                         Exit For
                     Else
                         nest -= 1
+                        blocks(blocks.Count - 1).block.Add(tkn)
                     End If
 
                 Case Else
@@ -314,15 +320,20 @@ Friend Module ParserAnalysis
             Select Case tkn.TokenType
                 Case GetType(SelectToken)
                     nest += 1
+                    blocks(blocks.Count - 1).block.Add(tkn)
 
                 Case GetType(CaseToken)
                     If nest = 0 Then
                         blocks.Add((tkn.GetToken(Of CaseToken), New List(Of TokenPosition)()))
+                    Else
+                        blocks(blocks.Count - 1).block.Add(tkn)
                     End If
 
                 Case GetType(ElseToken)
                     If nest = 0 Then
                         blocks.Add((tkn.GetToken(Of ElseToken), New List(Of TokenPosition)()))
+                    Else
+                        blocks(blocks.Count - 1).block.Add(tkn)
                     End If
 
                 Case GetType(EndSelectToken)
@@ -330,6 +341,7 @@ Friend Module ParserAnalysis
                         Exit For
                     Else
                         nest -= 1
+                        blocks(blocks.Count - 1).block.Add(tkn)
                     End If
 
                 Case Else

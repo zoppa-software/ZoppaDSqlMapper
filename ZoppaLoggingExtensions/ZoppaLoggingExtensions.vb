@@ -53,8 +53,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogDebug(0, exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogDebug(logger As LogWrapper, eventId As EventId, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Debug, eventId, exception, message, args)
+        Log(logger, LogLevel.Debug, eventId, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットしてデバッグログを出力します、</summary>
@@ -65,8 +64,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogDebug(0, "Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogDebug(logger As LogWrapper, eventId As EventId, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Debug, eventId, Nothing, message, args)
+        Log(logger, LogLevel.Debug, eventId, Nothing, message, args)
     End Sub
 
     ''' <summary>フォーマットしてデバッグログを出力します、</summary>
@@ -77,8 +75,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogDebug(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogDebug(logger As LogWrapper, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Debug, 0, exception, message, args)
+        Log(logger, LogLevel.Debug, 0, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットしてデバッグログを出力します、</summary>
@@ -87,8 +84,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogDebug(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogDebug(logger As LogWrapper, exception As Exception)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Debug, 0, exception, "", Array.Empty(Of Object)())
+        Log(logger, LogLevel.Debug, 0, exception, "", Array.Empty(Of Object)())
     End Sub
 
     ''' <summary>フォーマットしてデバッグログを出力します、</summary>
@@ -98,8 +94,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogDebug("Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogDebug(logger As LogWrapper, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Debug, 0, Nothing, message, args)
+        Log(logger, LogLevel.Debug, 0, Nothing, message, args)
     End Sub
 
 #End Region
@@ -115,8 +110,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogTrace(0, exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogTrace(logger As LogWrapper, eventId As EventId, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Trace, eventId, exception, message, args)
+        Log(logger, LogLevel.Trace, eventId, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットしてトレースログを出力します、</summary>
@@ -127,8 +121,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogTrace(0, "Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogTrace(logger As LogWrapper, eventId As EventId, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Trace, eventId, Nothing, message, args)
+        Log(logger, LogLevel.Trace, eventId, Nothing, message, args)
     End Sub
 
     ''' <summary>フォーマットしてトレースログを出力します、</summary>
@@ -139,8 +132,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogTrace(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogTrace(logger As LogWrapper, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Trace, 0, exception, message, args)
+        Log(logger, LogLevel.Trace, 0, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットしてトレースログを出力します、</summary>
@@ -149,8 +141,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogTrace(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogTrace(logger As LogWrapper, exception As Exception)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Trace, 0, exception, "", Array.Empty(Of Object)())
+        Log(logger, LogLevel.Trace, 0, exception, "", Array.Empty(Of Object)())
     End Sub
 
     ''' <summary>フォーマットしてトレースログを出力します、</summary>
@@ -160,8 +151,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogTrace("Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogTrace(logger As LogWrapper, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Trace, 0, Nothing, message, args)
+        Log(logger, LogLevel.Trace, 0, Nothing, message, args)
     End Sub
 
 #End Region
@@ -177,8 +167,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogInformation(0, exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogInformation(logger As LogWrapper, eventId As EventId, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Information, eventId, exception, message, args)
+        Log(logger, LogLevel.Information, eventId, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットして通常ログを出力します、</summary>
@@ -189,8 +178,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogInformation(0, "Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogInformation(logger As LogWrapper, eventId As EventId, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Information, eventId, Nothing, message, args)
+        Log(logger, LogLevel.Information, eventId, Nothing, message, args)
     End Sub
 
     ''' <summary>フォーマットして通常ログを出力します、</summary>
@@ -201,8 +189,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogInformation(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogInformation(logger As LogWrapper, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Information, 0, exception, message, args)
+        Log(logger, LogLevel.Information, 0, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットして通常ログを出力します、</summary>
@@ -211,8 +198,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogInformation(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogInformation(logger As LogWrapper, exception As Exception)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Information, 0, exception, "", Array.Empty(Of Object)())
+        Log(logger, LogLevel.Information, 0, exception, "", Array.Empty(Of Object)())
     End Sub
 
     ''' <summary>フォーマットして通常ログを出力します、</summary>
@@ -222,8 +208,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogInformation("Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogInformation(logger As LogWrapper, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Information, 0, Nothing, message, args)
+        Log(logger, LogLevel.Information, 0, Nothing, message, args)
     End Sub
 
 #End Region
@@ -239,8 +224,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogWarning(0, exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogWarning(logger As LogWrapper, eventId As EventId, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Warning, eventId, exception, message, args)
+        Log(logger, LogLevel.Warning, eventId, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットして警告ログを出力します、</summary>
@@ -251,8 +235,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogWarning(0, "Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogWarning(logger As LogWrapper, eventId As EventId, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Warning, eventId, Nothing, message, args)
+        Log(logger, LogLevel.Warning, eventId, Nothing, message, args)
     End Sub
 
     ''' <summary>フォーマットして警告ログを出力します、</summary>
@@ -263,8 +246,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogWarning(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogWarning(logger As LogWrapper, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Warning, 0, exception, message, args)
+        Log(logger, LogLevel.Warning, 0, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットして警告ログを出力します、</summary>
@@ -273,8 +255,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogWarning(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogWarning(logger As LogWrapper, exception As Exception)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Warning, 0, exception, "", Array.Empty(Of Object)())
+        Log(logger, LogLevel.Warning, 0, exception, "", Array.Empty(Of Object)())
     End Sub
 
     ''' <summary>フォーマットして警告ログを出力します、</summary>
@@ -284,8 +265,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogWarning("Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogWarning(logger As LogWrapper, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Warning, 0, Nothing, message, args)
+        Log(logger, LogLevel.Warning, 0, Nothing, message, args)
     End Sub
 
 #End Region
@@ -301,8 +281,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogError(0, exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogError(logger As LogWrapper, eventId As EventId, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Error, eventId, exception, message, args)
+        Log(logger, LogLevel.Error, eventId, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットしてエラーログを出力します、</summary>
@@ -313,8 +292,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogError(0, "Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogError(logger As LogWrapper, eventId As EventId, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Error, eventId, Nothing, message, args)
+        Log(logger, LogLevel.Error, eventId, Nothing, message, args)
     End Sub
 
     ''' <summary>フォーマットしてエラーログを出力します、</summary>
@@ -325,8 +303,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogError(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogError(logger As LogWrapper, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Error, 0, exception, message, args)
+        Log(logger, LogLevel.Error, 0, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットしてエラーログを出力します、</summary>
@@ -335,8 +312,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogError(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogError(logger As LogWrapper, exception As Exception)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Error, 0, exception, "", Array.Empty(Of Object)())
+        Log(logger, LogLevel.Error, 0, exception, "", Array.Empty(Of Object)())
     End Sub
 
     ''' <summary>フォーマットしてエラーログを出力します、</summary>
@@ -346,8 +322,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogError("Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogError(logger As LogWrapper, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Error, 0, Nothing, message, args)
+        Log(logger, LogLevel.Error, 0, Nothing, message, args)
     End Sub
 
 #End Region
@@ -363,8 +338,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogCritical(0, exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogCritical(logger As LogWrapper, eventId As EventId, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Critical, eventId, exception, message, args)
+        Log(logger, LogLevel.Critical, eventId, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットしてCriticalなログを出力します、</summary>
@@ -375,8 +349,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogCritical(0, "Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogCritical(logger As LogWrapper, eventId As EventId, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Critical, eventId, Nothing, message, args)
+        Log(logger, LogLevel.Critical, eventId, Nothing, message, args)
     End Sub
 
     ''' <summary>フォーマットしてCriticalなログを出力します、</summary>
@@ -387,8 +360,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogCritical(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogCritical(logger As LogWrapper, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Critical, 0, exception, message, args)
+        Log(logger, LogLevel.Critical, 0, exception, message, args)
     End Sub
 
     ''' <summary>フォーマットしてCriticalなログを出力します、</summary>
@@ -397,8 +369,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogCritical(exception, "Error while processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogCritical(logger As LogWrapper, exception As Exception)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Critical, 0, exception, "", Array.Empty(Of Object)())
+        Log(logger, LogLevel.Critical, 0, exception, "", Array.Empty(Of Object)())
     End Sub
 
     ''' <summary>フォーマットしてCriticalなログを出力します、</summary>
@@ -408,8 +379,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <example>logger.LogCritical("Processing request from {Address}", address)</example>
     <Extension()>
     Public Sub LogCritical(logger As LogWrapper, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, LogLevel.Critical, 0, Nothing, message, args)
+        Log(logger, LogLevel.Critical, 0, Nothing, message, args)
     End Sub
 
 #End Region
@@ -446,8 +416,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <param name="args">書式設定する 0 個以上のオブジェクトを含むオブジェクト配列。</param>
     <Extension()>
     Private Sub Log(logger As LogWrapper, logLevel As LogLevel, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, logLevel, 0, Nothing, message, args)
+        Log(logger, logLevel, 0, Nothing, message, args)
     End Sub
 
     ''' <summary>フォーマット また、指定されたログレベルでログメッセージを書き込みます。</summary>
@@ -458,8 +427,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <param name="args">書式設定する 0 個以上のオブジェクトを含むオブジェクト配列。</param>
     <Extension()>
     Public Sub Log(logger As LogWrapper, logLevel As LogLevel, eventId As EventId, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, logLevel, eventId, Nothing, message, args)
+        Log(logger, logLevel, eventId, Nothing, message, args)
     End Sub
 
     ''' <summary>フォーマット また、指定されたログレベルでログメッセージを書き込みます。</summary>
@@ -470,8 +438,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <param name="args">書式設定する 0 個以上のオブジェクトを含むオブジェクト配列。</param>
     <Extension()>
     Public Sub Log(logger As LogWrapper, logLevel As LogLevel, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, logLevel, 0, exception, message, args)
+        Log(logger, logLevel, 0, exception, message, args)
     End Sub
 
     ''' <summary>フォーマット また、指定されたログレベルでログメッセージを書き込みます。</summary>
@@ -480,8 +447,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <param name="exception">書き込む例外。</param>
     <Extension()>
     Public Sub Log(logger As LogWrapper, logLevel As LogLevel, exception As Exception)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, logLevel, 0, exception, "", Array.Empty(Of Object)())
+        Log(logger, logLevel, 0, exception, "", Array.Empty(Of Object)())
     End Sub
 
     ''' <summary>フォーマット また、指定されたログレベルでログメッセージを書き込みます。</summary>
@@ -492,13 +458,7 @@ Public Module ZoppaLogProcessExtensions
     ''' <param name="message">ログメッセージのフォーマット文字列。例は <c>"User {User} logged in from {Address}"</param>
     ''' <param name="args">書式設定する 0 個以上のオブジェクトを含むオブジェクト配列。</param>
     <Extension()>
-    Public Sub Log(logger As LogWrapper, logLevel As LogLevel, eventId As EventId, exception As Exception, message As String, ParamArray args() As Object)
-        Dim frame = New System.Diagnostics.StackTrace(1, True).GetFrame(0)
-        Log(logger, frame, logLevel, eventId, exception, message, args)
-    End Sub
-
-    ' ログ出力機能
-    Private Sub Log(wrap As LogWrapper, frame As StackFrame, logLevel As LogLevel, eventId As EventId, exception As Exception, message As String, ParamArray args() As Object)
+    Public Sub Log(wrap As LogWrapper, logLevel As LogLevel, eventId As EventId, exception As Exception, message As String, ParamArray args() As Object)
         If wrap.Logger IsNot Nothing Then
             wrap.Logger.Log(logLevel, eventId, New ZoppaFormattedLogValues(message, wrap.CallerType, wrap.CallerMember, wrap.CallerLineNumber, args), exception, _messageFormatter)
         Else

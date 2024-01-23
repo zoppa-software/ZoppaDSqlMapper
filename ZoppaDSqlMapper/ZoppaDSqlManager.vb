@@ -8,8 +8,8 @@ Imports System.Runtime.CompilerServices
 Imports System.Text
 Imports Microsoft.Extensions.DependencyInjection
 Imports Microsoft.Extensions.Logging
-Imports ZoppaDSqlCompiler
-Imports ZoppaDSqlCompiler.Tokens
+Imports ZoppaDSqlReplace
+Imports ZoppaDSqlReplace.Tokens
 Imports ZoppaLegacyFiles.Csv
 Imports ZoppaLoggingExtensions
 
@@ -74,7 +74,7 @@ Public Module ZoppaDSqlManager
         )
 
         _logFactory = loggerFactory
-        ZoppaDSqlCompiler.SetZoppaDSqlLogFactory(_logFactory)
+        ZoppaDSqlReplace.SetZoppaDSqlLogFactory(_logFactory)
 
         Using scope = _logger.Value?.BeginScope("log setting")
             _logger.Value?.LogInformation("output log file : {defaultLogFile}", defaultLogFile)
@@ -97,7 +97,7 @@ Public Module ZoppaDSqlManager
     Public Function SetZoppaDSqlLogProvider(provider As IServiceProvider) As IServiceProvider
         If _provider Is Nothing Then
             _provider = provider
-            ZoppaDSqlCompiler.SetZoppaDSqlLogProvider(_provider)
+            ZoppaDSqlReplace.SetZoppaDSqlLogProvider(_provider)
 
             Using scope = _logger.Value?.BeginScope("log setting")
                 _logger.Value?.LogInformation("use other log by service provider")
@@ -113,7 +113,7 @@ Public Module ZoppaDSqlManager
     Public Function SetZoppaDSqlLogFactory(factory As ILoggerFactory) As ILoggerFactory
         If _logFactory Is Nothing Then
             _logFactory = factory
-            ZoppaDSqlCompiler.SetZoppaDSqlLogFactory(_logFactory)
+            ZoppaDSqlReplace.SetZoppaDSqlLogFactory(_logFactory)
 
             Using scope = _logger.Value?.BeginScope("log setting")
                 _logger.Value?.LogInformation("use other log by logger factory")
@@ -146,11 +146,11 @@ Public Module ZoppaDSqlManager
             ' プロパティインフォを取得
             props = params.First().GetType().GetProperties().ToList()
             If propNames?.Length > 0 Then
-                Dim dic = props.ToDictionary(Of String, PropertyInfo)(Function(v) v.Name.ToLower(), Function(v) v)
+                Dim dic = props.ToDictionary(Of String, PropertyInfo)(Function(v) v.Name.ToLower(Globalization.CultureInfo.CurrentCulture), Function(v) v)
                 props.Clear()
                 For Each nm In propNames
                     Dim p As PropertyInfo = Nothing
-                    If dic.TryGetValue(nm.ToLower(), p) Then
+                    If dic.TryGetValue(nm.ToLower(Globalization.CultureInfo.CurrentCulture), p) Then
                         props.Add(p)
                     End If
                 Next
@@ -312,7 +312,7 @@ Public Module ZoppaDSqlManager
     ''' <returns>コンパイル結果。</returns>
     <Extension()>
     Public Function Compile(sqlQuery As String, Optional parameter As Object = Nothing) As String
-        Return ZoppaDSqlCompiler.Compile(sqlQuery, parameter)
+        Return ZoppaDSqlReplace.Replase(sqlQuery, parameter)
     End Function
 
     ''' <summary>引数の文字列を評価して値を取得します。</summary>
@@ -321,7 +321,7 @@ Public Module ZoppaDSqlManager
     ''' <returns>評価結果。</returns>
     <Extension()>
     Public Function Executes(expression As String, Optional parameter As Object = Nothing) As IToken
-        Return ZoppaDSqlCompiler.Executes(expression, parameter)
+        Return ZoppaDSqlReplace.Executes(expression, parameter)
     End Function
 
 #End Region
@@ -1745,7 +1745,7 @@ Public Module ZoppaDSqlManager
 #Region "execute object"
 
     ''' <summary>動的レコードです。</summary>
-    Private Class DynamicRecord
+    Private NotInheritable Class DynamicRecord
         Inherits DynamicObject
 
         ' データリスト
@@ -1756,7 +1756,7 @@ Public Module ZoppaDSqlManager
         ''' <param name="fields">値。</param>
         Public Sub New(clms As List(Of String), fields As Object())
             For i As Integer = 0 To clms.Count - 1
-                Me.mData.Add(clms(i).ToLower(), fields(i))
+                Me.mData.Add(clms(i).ToLower(Globalization.CultureInfo.CurrentCulture), fields(i))
             Next
         End Sub
 
@@ -1765,7 +1765,7 @@ Public Module ZoppaDSqlManager
         ''' <param name="result">取得値。</param>
         ''' <returns>取得出来たら真。</returns>
         Public Overrides Function TryGetMember(binder As GetMemberBinder, ByRef result As Object) As Boolean
-            Return Me.mData.TryGetValue(binder.Name.ToLower(), result)
+            Return Me.mData.TryGetValue(binder.Name.ToLower(Globalization.CultureInfo.CurrentCulture), result)
         End Function
 
     End Class

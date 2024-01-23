@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>ZoppaDSqlReplace</RootNamespace>
+    <TargetFramework>netstandard2.0</TargetFramework>
+	<VersionPrefix>0.9.2</VersionPrefix>
+	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+	<Copyright>Copyright 2024 zoppa-software</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZoppaLoggingExtensions\ZoppaLoggingExtensions.vbproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="LICENSE.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

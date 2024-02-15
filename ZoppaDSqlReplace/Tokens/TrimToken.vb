@@ -1,5 +1,6 @@
 ﻿Option Strict On
 Option Explicit On
+
 Imports ZoppaDSqlReplace.TokenCollection
 
 Namespace Tokens
@@ -9,9 +10,13 @@ Namespace Tokens
         Implements IToken, IControlToken
 
         ''' <summary>末尾からトリムする文字列を返します。</summary>
-        Public ReadOnly Property TrimStrings As String()
+        Public ReadOnly Property TrimStrings As TrimWord()
 
+        ''' <summary>両方トリムするかどうかを取得します。</summary>
         Public ReadOnly Property IsBoth As Boolean
+
+        ''' <summary>Whereトリムするかどうかを取得します。</summary>
+        Public ReadOnly Property IsWhere As Boolean
 
         ''' <summary>格納されている値を取得する。</summary>
         ''' <returns>格納値。</returns>
@@ -46,14 +51,24 @@ Namespace Tokens
         End Property
 
         ''' <summary>コンストラクタ。</summary>
-        Public Sub New(isBoth As Boolean)
-            Me.TrimStrings = New String() {"where", ",", "and", "or", "()"}
+        ''' <param name="isBoth">両方トリムするかどうか。</param>
+        ''' <param name="isWTrim">Whereトリムを行うならば。</param>
+        Public Sub New(isBoth As Boolean, isWTrim As Boolean)
+            Me.TrimStrings = New TrimWord() {
+                New TrimWord("where", True),
+                New TrimWord(",", False),
+                New TrimWord("and", True),
+                New TrimWord("or", True),
+                New TrimWord("()", False)
+            }
             Me.IsBoth = isBoth
         End Sub
 
         ''' <summary>コンストラクタ。</summary>
+        ''' <param name="isBoth">両方トリムするかどうか。</param>
+        ''' <param name="isWTrim">Whereトリムを行うならば。</param>
         ''' <param name="trimStr">末尾からトリム文字。</param>
-        Public Sub New(isBoth As Boolean, trimStr As String)
+        Public Sub New(isBoth As Boolean, isWTrim As Boolean, trimStr As String)
             Dim tokens = LexicalAnalysis.SplitToken(trimStr)
             Dim res As New List(Of IToken)()
 
@@ -92,7 +107,12 @@ Namespace Tokens
                 End Select
             Loop
 
-            Me.TrimStrings = res.Select(Function(s) s.Contents.ToString()).ToArray()
+            Me.TrimStrings = res.Select(
+                Function(s)
+                    Dim wd = s.Contents.ToString()
+                    Dim isKey = If(TryCast(s, StringToken)?.BracketChar = """"c, False)
+                    Return New TrimWord(wd, isKey)
+                End Function).ToArray()
             Me.IsBoth = isBoth
         End Sub
 
@@ -101,6 +121,19 @@ Namespace Tokens
         Public Overrides Function ToString() As String
             Return "Trim"
         End Function
+
+        Public Structure TrimWord
+
+            Public ReadOnly Word As String
+
+            Public ReadOnly IsKey As Boolean
+
+            Public Sub New(word As String, isKey As Boolean)
+                Me.Word = word
+                Me.IsKey = isKey
+            End Sub
+
+        End Structure
 
     End Class
 

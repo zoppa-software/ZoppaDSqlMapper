@@ -278,20 +278,25 @@ Friend Module ParserAnalysis
 
         Dim tarStr = lclbuf.ToString()
 
-        For Each trimWord In strimToken.TrimStrings
-            If tarStr.TrimEnd().EndsWith(trimWord, StringComparison.CurrentCultureIgnoreCase) Then
-                Dim idx = tarStr.LastIndexOf(trimWord, StringComparison.CurrentCultureIgnoreCase)
-                tarStr = tarStr.Remove(idx, trimWord.Length).TrimEnd(" "c, vbTab(0))
-                Exit For
+        For Each twd In strimToken.TrimStrings
+            If tarStr.TrimEnd().EndsWith(twd.Word, StringComparison.CurrentCultureIgnoreCase) Then
+                Dim idx = tarStr.LastIndexOf(twd.Word, StringComparison.CurrentCultureIgnoreCase)
+                If Not twd.IsKey OrElse (idx = 0 OrElse Char.IsWhiteSpace(tarStr(idx - 1))) Then
+                    tarStr = tarStr.Substring(0, idx).TrimEnd(" "c, vbTab(0))
+                    Exit For
+                End If
             End If
         Next
 
         If strimToken.IsBoth Then
-            For Each trimWord In strimToken.TrimStrings
-                If tarStr.TrimStart().StartsWith(trimWord, StringComparison.CurrentCultureIgnoreCase) Then
-                    Dim idx = tarStr.IndexOf(trimWord, StringComparison.CurrentCultureIgnoreCase)
-                    tarStr = tarStr.Remove(idx, trimWord.Length).TrimStart(" "c, vbTab(0))
-                    Exit For
+            For Each twd In strimToken.TrimStrings
+                If tarStr.TrimStart().StartsWith(twd.Word, StringComparison.CurrentCultureIgnoreCase) Then
+                    Dim startIdx = tarStr.IndexOf(twd.Word, StringComparison.CurrentCultureIgnoreCase)
+                    Dim endIdx = startIdx + twd.Word.Length
+                    If Not twd.IsKey OrElse (endIdx = tarStr.Length OrElse Char.IsWhiteSpace(tarStr(endIdx))) Then
+                        tarStr = tarStr.Remove(startIdx, twd.Word.Length).TrimStart(" "c, vbTab(0))
+                        Exit For
+                    End If
                 End If
             Next
         End If
@@ -371,22 +376,7 @@ Friend Module ParserAnalysis
                     ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
             End Select
         Next
-        'For Each tkn In blocks
-        '    Select Case tkn.condition.TokenType
-        '        Case GetType(IfToken), GetType(ElseIfToken)
-        '            ' 条件を評価して真ならば、ブロックを出力
-        '            Dim ifans = Executes(DirectCast(tkn.condition, ICommandToken).CommandTokens, parameter)
-        '            If TypeOf ifans.Contents Is Boolean AndAlso CBool(ifans.Contents) Then
-        '                Dim tkns As New List(Of TokenPosition)(tkn.block)
-        '                ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
-        '                Exit For
-        '            End If
 
-        '        Case GetType(ElseToken)
-        '            Dim tkns As New List(Of TokenPosition)(tkn.block)
-        '            ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
-        '    End Select
-        'Next
         buffer.Append(lclbuf.ToString())
     End Sub
 

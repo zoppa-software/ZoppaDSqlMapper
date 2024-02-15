@@ -45,7 +45,7 @@ limit 10")
         Assert.Equal(ans2.Trim(),
 "select * from employees
 where
-    emp_no < 20000 
+    emp_no < 20000
 limit 10")
 
         Dim ans3 = query1.Replase(New With {.empNo = False, .first_name = True, .gender = False})
@@ -227,7 +227,7 @@ FROM
 
     <Fact>
     Public Sub TrimTest()
-        Dim ans1 = "{trim}   a = #{12 * 13}   {end trim}".Replase()
+        Dim ans1 = "{trim ""tr""}   a = #{12 * 13}   {end trim}".Replase()
         Assert.Equal(ans1, "   a = 156   ")
 
         Dim ans2 = "{trim 'trush'}   a = #{'11' + '29'}trush{end trim}".Replase()
@@ -265,55 +265,55 @@ FROM
     Public Sub TrimTest2()
         Dim query = "SELECT
 {if sel}
-	T_摘要M.摘要CD,T_摘要M.摘要名
+	Tekiyo.Code,Tekiyo.Name
 {else}
 	count(*) as cnt
 {end if}
-FROM T_摘要M
+FROM Tekiyo
 {trim}
 WHERE
     {trim both}
-    {if txZyCd <> ''}T_摘要M.担当者CD like '%!{txZyCd}%'{end if}
-    {if txZyNm <> ''}AND T_摘要M.摘要名 like '%!{txZyNm}%'{end if}
+    {if txZyCd <> ''}Tekiyo.担当者CD like '%!{txZyCd}%'{end if}
+    {if txZyNm <> ''}AND Tekiyo.Name like '%!{txZyNm}%'{end if}
     {/trim}
 {end trim}
 {if sel}
-ORDER BY T_摘要M.摘要CD
+ORDER BY Tekiyo.Code
 {end if}
 "
         Dim ans1 = query.Replase(New With {.sel = True, .txZyCd = "A", .txZyNm = ""})
         Assert.Equal(ans1, "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name
+FROM Tekiyo
 WHERE
-    T_摘要M.担当者CD like '%A%'
-ORDER BY T_摘要M.摘要CD
+    Tekiyo.担当者CD like '%A%'
+ORDER BY Tekiyo.Code
 ")
 
         Dim ans2 = query.Replase(New With {.sel = True, .txZyCd = "", .txZyNm = ""})
         Assert.Equal(ans2, "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名
-FROM T_摘要M
-ORDER BY T_摘要M.摘要CD
+	Tekiyo.Code,Tekiyo.Name
+FROM Tekiyo
+ORDER BY Tekiyo.Code
 ")
 
         Dim ans3 = query.Replase(New With {.sel = True, .txZyCd = "", .txZyNm = "B"})
         Assert.Equal(ans3, "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name
+FROM Tekiyo
 WHERE
-     T_摘要M.摘要名 like '%B%'
-ORDER BY T_摘要M.摘要CD
+     Tekiyo.Name like '%B%'
+ORDER BY Tekiyo.Code
 ")
 
         Dim ans4 = query.Replase(New With {.sel = True, .txZyCd = "A", .txZyNm = "B"})
         Assert.Equal(ans4, "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name
+FROM Tekiyo
 WHERE
-    T_摘要M.担当者CD like '%A%'
-    AND T_摘要M.摘要名 like '%B%'
-ORDER BY T_摘要M.摘要CD
+    Tekiyo.担当者CD like '%A%'
+    AND Tekiyo.Name like '%B%'
+ORDER BY Tekiyo.Code
 ")
     End Sub
 
@@ -321,89 +321,89 @@ ORDER BY T_摘要M.摘要CD
     Public Sub TrimTest3()
         Dim query = "SELECT
 {if sel}
-	T_摘要M.摘要CD,T_摘要M.摘要名,T_摘要M.摘要No
+	Tekiyo.Code,Tekiyo.Name,Tekiyo.No
 {else}
 	count(*) as cnt
 {end if}
-FROM T_摘要M
+FROM Tekiyo
 {trim}
 WHERE
     {trim both}
-    {if txZyCd <> ''}T_摘要M.担当者CD like '%!{txZyCd}%'{end if}
-    {if txZyNm <> ''}AND T_摘要M.摘要名 like '%!{txZyNm}%'{end if}
-    {if txZyNo <> ''}AND T_摘要M.摘要No like '%!{txZyNo}%'{end if}
+    {if txZyCd <> ''}Tekiyo.担当者CD like '%!{txZyCd}%'{end if}
+    {if txZyNm <> ''}AND Tekiyo.Name like '%!{txZyNm}%'{end if}
+    {if txZyNo <> ''}AND Tekiyo.No like '%!{txZyNo}%'{end if}
     {/trim}
 {end trim}
 {if sel}
-ORDER BY T_摘要M.摘要CD,T_摘要M.摘要No
+ORDER BY Tekiyo.Code,Tekiyo.No
 {end if}
 "
         Dim ans1 = query.Replase(New With {.sel = True, .txZyCd = "A", .txZyNm = "", .txZyNo = ""})
         Assert.Equal(ans1.Trim(), "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名,T_摘要M.摘要No
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name,Tekiyo.No
+FROM Tekiyo
 WHERE
-    T_摘要M.担当者CD like '%A%'
-ORDER BY T_摘要M.摘要CD,T_摘要M.摘要No")
+    Tekiyo.担当者CD like '%A%'
+ORDER BY Tekiyo.Code,Tekiyo.No")
 
         Dim ans2 = query.Replase(New With {.sel = True, .txZyCd = "", .txZyNm = "B", .txZyNo = ""})
         Assert.Equal(ans2.Trim(), "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名,T_摘要M.摘要No
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name,Tekiyo.No
+FROM Tekiyo
 WHERE
-     T_摘要M.摘要名 like '%B%'
-ORDER BY T_摘要M.摘要CD,T_摘要M.摘要No")
+     Tekiyo.Name like '%B%'
+ORDER BY Tekiyo.Code,Tekiyo.No")
 
         Dim ans3 = query.Replase(New With {.sel = True, .txZyCd = "", .txZyNm = "", .txZyNo = "C"})
         Assert.Equal(ans3.Trim(), "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名,T_摘要M.摘要No
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name,Tekiyo.No
+FROM Tekiyo
 WHERE
-     T_摘要M.摘要No like '%C%'
-ORDER BY T_摘要M.摘要CD,T_摘要M.摘要No")
+     Tekiyo.No like '%C%'
+ORDER BY Tekiyo.Code,Tekiyo.No")
 
         Dim ans4 = query.Replase(New With {.sel = True, .txZyCd = "A", .txZyNm = "B", .txZyNo = ""})
         Assert.Equal(ans4.Trim(), "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名,T_摘要M.摘要No
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name,Tekiyo.No
+FROM Tekiyo
 WHERE
-    T_摘要M.担当者CD like '%A%'
-    AND T_摘要M.摘要名 like '%B%'
-ORDER BY T_摘要M.摘要CD,T_摘要M.摘要No")
+    Tekiyo.担当者CD like '%A%'
+    AND Tekiyo.Name like '%B%'
+ORDER BY Tekiyo.Code,Tekiyo.No")
 
         Dim ans5 = query.Replase(New With {.sel = True, .txZyCd = "A", .txZyNm = "", .txZyNo = "C"})
         Assert.Equal(ans5.Trim(), "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名,T_摘要M.摘要No
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name,Tekiyo.No
+FROM Tekiyo
 WHERE
-    T_摘要M.担当者CD like '%A%'
-    AND T_摘要M.摘要No like '%C%'
-ORDER BY T_摘要M.摘要CD,T_摘要M.摘要No")
+    Tekiyo.担当者CD like '%A%'
+    AND Tekiyo.No like '%C%'
+ORDER BY Tekiyo.Code,Tekiyo.No")
 
         Dim ans6 = query.Replase(New With {.sel = True, .txZyCd = "", .txZyNm = "B", .txZyNo = "C"})
         Assert.Equal(ans6.Trim(), "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名,T_摘要M.摘要No
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name,Tekiyo.No
+FROM Tekiyo
 WHERE
-     T_摘要M.摘要名 like '%B%'
-    AND T_摘要M.摘要No like '%C%'
-ORDER BY T_摘要M.摘要CD,T_摘要M.摘要No")
+     Tekiyo.Name like '%B%'
+    AND Tekiyo.No like '%C%'
+ORDER BY Tekiyo.Code,Tekiyo.No")
 
         Dim ans7 = query.Replase(New With {.sel = True, .txZyCd = "A", .txZyNm = "B", .txZyNo = "C"})
         Assert.Equal(ans7.Trim(), "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名,T_摘要M.摘要No
-FROM T_摘要M
+	Tekiyo.Code,Tekiyo.Name,Tekiyo.No
+FROM Tekiyo
 WHERE
-    T_摘要M.担当者CD like '%A%'
-    AND T_摘要M.摘要名 like '%B%'
-    AND T_摘要M.摘要No like '%C%'
-ORDER BY T_摘要M.摘要CD,T_摘要M.摘要No")
+    Tekiyo.担当者CD like '%A%'
+    AND Tekiyo.Name like '%B%'
+    AND Tekiyo.No like '%C%'
+ORDER BY Tekiyo.Code,Tekiyo.No")
 
         Dim ans8 = query.Replase(New With {.sel = True, .txZyCd = "", .txZyNm = "", .txZyNo = ""})
         Assert.Equal(ans8.Trim(), "SELECT
-	T_摘要M.摘要CD,T_摘要M.摘要名,T_摘要M.摘要No
-FROM T_摘要M
-ORDER BY T_摘要M.摘要CD,T_摘要M.摘要No")
+	Tekiyo.Code,Tekiyo.Name,Tekiyo.No
+FROM Tekiyo
+ORDER BY Tekiyo.Code,Tekiyo.No")
     End Sub
 
 End Class

@@ -15,12 +15,11 @@ from
   albums
 inner join artists on
   albums.ArtistId = artists.ArtistId
-{trim}
 where
-  {if seachId <> 0} albums.ArtistId = @seachId{/if}
-{/trim}";
+  albums.ArtistId = @seachId
+";
 
-    var answer = await sqlite.ExecuteRecordsSync<AlbumInfo>(query, new { seachId = 23 });
+    var answer = sqlite.ExecuteRecords<AlbumInfo>(query, new int[]{11, 23}.Select(v => new { seachId = v }));
 
 
     var query1 =

@@ -10,6 +10,9 @@ Namespace Tokens
         ' 文字列
         Private ReadOnly mValue As String
 
+        ''' <summary>囲み文字を取得します。</summary>
+        Public ReadOnly Property BracketChar As Char
+
         ''' <summary>格納されている値を取得する。</summary>
         ''' <returns>格納値。</returns>
         Public ReadOnly Property Contents As Object Implements IToken.Contents
@@ -44,8 +47,10 @@ Namespace Tokens
 
         ''' <summary>コンストラクタ。</summary>
         ''' <param name="value">文字列。</param>
-        Public Sub New(value As String)
+        ''' <param name="bktChar">囲み文字。</param>
+        Public Sub New(value As String, bktChar As Char)
             Me.mValue = value
+            Me.BracketChar = bktChar
         End Sub
 
         ''' <summary>文字列条件を取得します。</summary>

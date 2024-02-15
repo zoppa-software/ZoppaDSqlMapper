@@ -32,7 +32,7 @@ Namespace Express
                 Case GetType(IdentToken)
                     Dim obj = env.GetValue(If(Me.mToken.Contents?.ToString(), ""))
                     If TypeOf obj Is String Then
-                        Return New StringToken(obj.ToString())
+                        Return New StringToken(obj.ToString(), Nothing)
                     ElseIf TypeOf obj Is Int32 OrElse
                            TypeOf obj Is Double OrElse
                            TypeOf obj Is Decimal OrElse

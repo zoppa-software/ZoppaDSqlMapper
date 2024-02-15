@@ -40,7 +40,7 @@ Namespace Express
             If nml IsNot Nothing AndAlso nmr IsNot Nothing Then
                 Return nml.PlusComputation(nmr)
             ElseIf tml?.TokenType = GetType(StringToken) Then
-                Return New StringToken($"{tml.Contents}{If(tmr?.Contents, "null")}")
+                Return New StringToken($"{tml.Contents}{If(tmr?.Contents, "null")}", Nothing)
             Else
                 Try
                     Dim lf = If(nml, NumberToken.Create(If(tml?.Contents.ToString(), "null")))

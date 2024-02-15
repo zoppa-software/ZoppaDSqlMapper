@@ -9,7 +9,7 @@ Public Structure ZoppaFormattedLogValues
     Implements IReadOnlyList(Of KeyValuePair(Of String, Object))
 
     ''' <summary>キャッシュの最大サイズ。</summary>
-    Private Const MaxCachedFormatters As Integer = 3
+    Private Const MaxCachedFormatters As Integer = 64
 
     ''' <summary>NULLフォーマット。</summary>
     Private Const NullFormat As String = "[null]"

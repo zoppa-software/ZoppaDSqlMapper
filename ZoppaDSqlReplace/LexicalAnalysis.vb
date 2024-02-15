@@ -239,14 +239,18 @@ Friend Module LexicalAnalysis
             Return EndForToken.Value
         ElseIf lowStr.StartsWith("/for") Then
             Return EndForToken.Value
+        ElseIf lowStr.StartsWith("trim where ") Then
+            Return New TrimToken(False, True, codeStr.Substring(10))
+        ElseIf lowStr.StartsWith("trim where") Then
+            Return New TrimToken(False, True)
         ElseIf lowStr.StartsWith("trim both ") Then
-            Return New TrimToken(True, codeStr.Substring(9))
+            Return New TrimToken(True, False, codeStr.Substring(9))
         ElseIf lowStr.StartsWith("trim both") Then
-            Return New TrimToken(True)
+            Return New TrimToken(True, False)
         ElseIf lowStr.StartsWith("trim ") Then
-            Return New TrimToken(False, codeStr.Substring(5))
+            Return New TrimToken(False, False, codeStr.Substring(5))
         ElseIf lowStr.StartsWith("trim") Then
-            Return New TrimToken(False)
+            Return New TrimToken(False, False)
         ElseIf lowStr.StartsWith("end trim") Then
             Return EndTrimToken.Value
         ElseIf lowStr.StartsWith("/trim") Then
@@ -362,7 +366,9 @@ Friend Module LexicalAnalysis
                 ElseIf c = "#"c Then
                     tokens.Add(New TokenPosition(CreateDateToken(reader), pos))
                 ElseIf c = "'"c Then
-                    tokens.Add(New TokenPosition(CreateStringToken(reader), pos))
+                    tokens.Add(New TokenPosition(CreateStringToken(reader, "'"c), pos))
+                ElseIf c = """"c Then
+                    tokens.Add(New TokenPosition(CreateStringToken(reader, """"c), pos))
                 ElseIf Char.IsDigit(c) Then
                     tokens.Add(New TokenPosition(CreateNumberToken(reader), pos))
                 Else
@@ -418,8 +424,9 @@ Friend Module LexicalAnalysis
 
     ''' <summary>文字列トークンを生成します。</summary>
     ''' <param name="reader">入力文字ストリーム。</param>
+    ''' <param name="bktChar">囲み文字。</param>
     ''' <returns>文字列トークン。</returns>
-    Private Function CreateStringToken(reader As StringPtr) As StringToken
+    Private Function CreateStringToken(reader As StringPtr, bktChar As Char) As StringToken
         Dim res As New StringBuilder()
         Dim closed = False
 
@@ -429,13 +436,13 @@ Friend Module LexicalAnalysis
             Dim c = reader.Current()
             reader.Move(1)
 
-            If c = "\"c AndAlso reader.Current = "'"c Then
-                res.Append("'"c)
+            If c = "\"c AndAlso reader.Current = bktChar Then
+                res.Append(bktChar)
                 reader.Move(1)
-            ElseIf c = "'"c AndAlso reader.Current = "'"c Then
-                res.Append("'"c)
+            ElseIf c = bktChar AndAlso reader.Current = bktChar Then
+                res.Append(bktChar)
                 reader.Move(1)
-            ElseIf c <> "'"c Then
+            ElseIf c <> bktChar Then
                 res.Append(c)
             Else
                 closed = True
@@ -444,7 +451,7 @@ Friend Module LexicalAnalysis
         Loop
 
         If closed Then
-            Return New StringToken(res.ToString())
+            Return New StringToken(res.ToString(), bktChar)
         Else
             Throw New DSqlAnalysisException($"文字列リテラルが閉じられていない:{res}")
         End If

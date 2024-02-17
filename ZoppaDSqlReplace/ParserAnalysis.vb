@@ -36,7 +36,7 @@ Friend Module ParserAnalysis
         Dim res As New StringBuilder(buffer.Length)
 
         ' 改行単位で分割
-        Dim lines = buffer.ToString().Split(New String() {Environment.NewLine}, StringSplitOptions.None)
+        Dim lines = buffer.ToString().Split(New String() {Environment.NewLine, vbLf}, StringSplitOptions.None)
 
         ' 空白行以外を追加
         For i As Integer = 0 To lines.Length - 2

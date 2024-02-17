@@ -4,6 +4,8 @@ Imports ZoppaDSqlReplace.Tokens
 
 Public Class CompileTest
 
+    ' 改行コードが CRLFからLFに変わっているかもしれません。その場合はCRLFに変更するとテストが通ります
+
     <Fact>
     Public Sub WhereTrimTest()
         Dim query3 = "" &
@@ -86,13 +88,14 @@ WHERE
     FirstName in ({trim}{foreach nm in names}#{nm}{}, {end for}{end trim})
 "
         Dim ans1 = query1.Replase(New With {.names = New String() {"Helena", "Dan", "Aaron"}})
-        Assert.Equal(ans1.Trim(),
+        Assert.Equal(ans1,
 "SELECT
     *
 FROM
     customers
 WHERE
-    FirstName in ('Helena', 'Dan', 'Aaron')")
+    FirstName in ('Helena', 'Dan', 'Aaron')
+")
 
         Dim query2 = "" &
 "SELECT

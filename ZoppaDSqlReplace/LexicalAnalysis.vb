@@ -237,7 +237,7 @@ Friend Module LexicalAnalysis
             Return New ForEachToken(SplitToken(codeStr.Substring(9)))
         ElseIf lowStr.StartsWith("foreach ") Then
             Return New ForEachToken(SplitToken(codeStr.Substring(8)))
-        ElseIf lowStr.StartsWith("foreach ") Then
+        ElseIf lowStr.StartsWith("for ") Then
             Return New ForToken(SplitToken(codeStr.Substring(4)))
         ElseIf lowStr.StartsWith("end for") Then
             Return EndForToken.Value

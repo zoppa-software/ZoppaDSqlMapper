@@ -31,23 +31,7 @@ Namespace Express
             Select Case Me.mToken.TokenType
                 Case GetType(IdentToken)
                     Dim obj = env.GetValue(If(Me.mToken.Contents?.ToString(), ""))
-                    If TypeOf obj Is String Then
-                        Return New StringToken(obj.ToString(), Nothing)
-                    ElseIf TypeOf obj Is Int32 OrElse
-                           TypeOf obj Is Double OrElse
-                           TypeOf obj Is Decimal OrElse
-                           TypeOf obj Is UInt64 OrElse
-                           TypeOf obj Is UInt32 OrElse
-                           TypeOf obj Is UInt16 OrElse
-                           TypeOf obj Is Single OrElse
-                           TypeOf obj Is SByte OrElse
-                           TypeOf obj Is Byte OrElse
-                           TypeOf obj Is Int64 OrElse
-                           TypeOf obj Is Int16 Then
-                        Return NumberToken.ConvertToken(obj)
-                    Else
-                        Return New ObjectToken(obj)
-                    End If
+                    Return ConvertValueToken(obj)
 
                 Case Else
                     Return Me.mToken
@@ -63,6 +47,29 @@ Namespace Express
                 Case Else
                     Return $"expr:{If(Me.mToken?.Contents, "null")}"
             End Select
+        End Function
+
+        ''' <summary>値をトークンに変換します。</summary>
+        ''' <param name="obj">値。</param>
+        ''' <returns>トークン。</returns>
+        Friend Shared Function ConvertValueToken(obj As Object) As IToken
+            If TypeOf obj Is String Then
+                Return New StringToken(obj.ToString(), Nothing)
+            ElseIf TypeOf obj Is Int32 OrElse
+                   TypeOf obj Is Double OrElse
+                   TypeOf obj Is Decimal OrElse
+                   TypeOf obj Is UInt64 OrElse
+                   TypeOf obj Is UInt32 OrElse
+                   TypeOf obj Is UInt16 OrElse
+                   TypeOf obj Is Single OrElse
+                   TypeOf obj Is SByte OrElse
+                   TypeOf obj Is Byte OrElse
+                   TypeOf obj Is Int64 OrElse
+                   TypeOf obj Is Int16 Then
+                Return NumberToken.ConvertToken(obj)
+            Else
+                Return New ObjectToken(obj)
+            End If
         End Function
 
     End Class

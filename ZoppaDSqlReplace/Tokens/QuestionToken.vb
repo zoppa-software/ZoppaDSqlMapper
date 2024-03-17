@@ -1,16 +1,21 @@
 ﻿Option Strict On
 Option Explicit On
 
-Imports ZoppaDSqlReplace.TokenCollection
-
 Namespace Tokens
 
-    ''' <summary>ForEachトークン。</summary>
-    Public NotInheritable Class ForEachToken
-        Implements IToken, ICommandToken, IControlToken
+    ''' <summary>クエスチョントークン。</summary>
+    Public NotInheritable Class QuestionToken
+        Implements IToken
 
-        ' 条件式トークン
-        Private ReadOnly mToken As List(Of TokenPosition)
+        ''' <summary>遅延インスタンス生成プロパティ。</summary>
+        Private Shared ReadOnly Property LazyInstance() As New Lazy(Of QuestionToken)(Function() New QuestionToken())
+
+        ''' <summary>唯一のインスタンスを返します。</summary>
+        Public Shared ReadOnly Property Value() As QuestionToken
+            Get
+                Return LazyInstance.Value
+            End Get
+        End Property
 
         ''' <summary>格納されている値を取得する。</summary>
         ''' <returns>格納値。</returns>
@@ -24,15 +29,7 @@ Namespace Tokens
         ''' <returns>トークン型。</returns>
         Public ReadOnly Property TokenType As Type Implements IToken.TokenType
             Get
-                Return GetType(ForEachToken)
-            End Get
-        End Property
-
-        ''' <summary>条件式トークンリストを取得します。</summary>
-        ''' <returns>条件式トークンリスト。</returns>
-        Public ReadOnly Property CommandTokens As List(Of TokenPosition) Implements ICommandToken.CommandTokens
-            Get
-                Return Me.mToken
+                Return GetType(QuestionToken)
             End Get
         End Property
 
@@ -53,15 +50,14 @@ Namespace Tokens
         End Property
 
         ''' <summary>コンストラクタ。</summary>
-        ''' <param name="tokens">ループ変数のトークン。</param>
-        Public Sub New(tokens As List(Of TokenPosition))
-            Me.mToken = tokens
+        Private Sub New()
+
         End Sub
 
         ''' <summary>文字列条件を取得します。</summary>
         ''' <returns>文字列表現。</returns>
         Public Overrides Function ToString() As String
-            Return "For Each"
+            Return "?"
         End Function
 
     End Class

@@ -3,15 +3,15 @@ Option Explicit On
 
 Namespace Tokens
 
-    ''' <summary>Elseトークン。</summary>
-    Public NotInheritable Class ElseToken
+    ''' <summary>左ブラケットトークン。</summary>
+    Public NotInheritable Class LBracketToken
         Implements IToken
 
         ''' <summary>遅延インスタンス生成プロパティ。</summary>
-        Private Shared ReadOnly Property LazyInstance() As New Lazy(Of ElseToken)(Function() New ElseToken())
+        Private Shared ReadOnly Property LazyInstance() As New Lazy(Of LBracketToken)(Function() New LBracketToken())
 
         ''' <summary>唯一のインスタンスを返します。</summary>
-        Public Shared ReadOnly Property Value() As ElseToken
+        Public Shared ReadOnly Property Value() As LBracketToken
             Get
                 Return LazyInstance.Value
             End Get
@@ -29,7 +29,7 @@ Namespace Tokens
         ''' <returns>トークン型。</returns>
         Public ReadOnly Property TokenType As Type Implements IToken.TokenType
             Get
-                Return GetType(ElseToken)
+                Return GetType(LBracketToken)
             End Get
         End Property
 
@@ -57,9 +57,10 @@ Namespace Tokens
         ''' <summary>文字列条件を取得します。</summary>
         ''' <returns>文字列表現。</returns>
         Public Overrides Function ToString() As String
-            Return "Else"
+            Return "["
         End Function
 
     End Class
 
 End Namespace
+

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <RootNamespace>ZoppaDSql</RootNamespace>
     <TargetFramework>netstandard2.0</TargetFramework>
-	  <Version>1.0.0</Version>
+	  <Version>1.0.2</Version>
 	  <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 	  <Copyright>Copyright 2024 zoppa-software</Copyright>
 	  <AnalysisLevel>latest</AnalysisLevel>
@@ -12,9 +12,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ZoppaDSqlReplace" Version="1.0.0" />
+    <PackageReference Include="ZoppaDSqlReplace" Version="1.0.2" />
     <PackageReference Include="ZoppaLegacyFiles" Version="1.0.0" />
-    <PackageReference Include="ZoppaLoggingExtensions" Version="1.0.1" />
+    <PackageReference Include="ZoppaLoggingExtensions" Version="1.0.2" />
   </ItemGroup>
 
   <ItemGroup>

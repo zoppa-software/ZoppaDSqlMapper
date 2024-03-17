@@ -5,9 +5,9 @@ Imports ZoppaDSqlReplace.TokenCollection
 
 Namespace Tokens
 
-    ''' <summary>ElseIfトークン。</summary>
-    Public NotInheritable Class ElseIfToken
-        Implements IToken, ICommandToken
+    ''' <summary>ForEachトークン。</summary>
+    Public NotInheritable Class ForEachToken
+        Implements IToken, ICommandToken, IControlToken
 
         ' 条件式トークン
         Private ReadOnly mToken As List(Of TokenPosition)
@@ -16,7 +16,7 @@ Namespace Tokens
         ''' <returns>格納値。</returns>
         Public ReadOnly Property Contents As Object Implements IToken.Contents
             Get
-                Throw New NotImplementedException("使用できません")
+                Return Me.mToken
             End Get
         End Property
 
@@ -24,12 +24,12 @@ Namespace Tokens
         ''' <returns>トークン型。</returns>
         Public ReadOnly Property TokenType As Type Implements IToken.TokenType
             Get
-                Return GetType(ElseIfToken)
+                Return GetType(ForEachToken)
             End Get
         End Property
 
-        ''' <summary>命令トークンリストを取得します。</summary>
-        ''' <returns>命令トークンリスト。</returns>
+        ''' <summary>条件式トークンリストを取得します。</summary>
+        ''' <returns>条件式トークンリスト。</returns>
         Public ReadOnly Property CommandTokens As List(Of TokenPosition) Implements ICommandToken.CommandTokens
             Get
                 Return Me.mToken
@@ -53,17 +53,18 @@ Namespace Tokens
         End Property
 
         ''' <summary>コンストラクタ。</summary>
-        ''' <param name="tokens">条件式のトークン。</param>
+        ''' <param name="tokens">ループ変数のトークン。</param>
         Public Sub New(tokens As List(Of TokenPosition))
-            Me.mToken = New List(Of TokenPosition)(tokens)
+            Me.mToken = tokens
         End Sub
 
         ''' <summary>文字列条件を取得します。</summary>
         ''' <returns>文字列表現。</returns>
         Public Overrides Function ToString() As String
-            Return "ElseIf"
+            Return "For Each"
         End Function
 
     End Class
 
 End Namespace
+

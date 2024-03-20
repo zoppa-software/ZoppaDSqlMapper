@@ -228,6 +228,30 @@ Public Class AnalysisTest2
             )
     End Sub
 
+    Enum Mode
+        None = 1
+        MyGroup = 2
+        Specified = 3
+    End Enum
+
+    <Fact>
+    Sub EnumTest()
+        Dim ans1 = "eval = 'None'".Executes(New With {.eval = Mode.None}).Contents
+        Assert.True(ans1)
+
+        Dim ans2 = "eval <> 'None'".Executes(New With {.eval = Mode.None}).Contents
+        Assert.False(ans2)
+
+        Dim ans3 = "eval = 3".Executes(New With {.eval = Mode.Specified}).Contents
+        Assert.True(ans3)
+
+        Dim ans4 = "eval <> 3".Executes(New With {.eval = Mode.Specified}).Contents
+        Assert.False(ans4)
+
+        Dim ans5 = "eval = eval2".Executes(New With {.eval = Mode.Specified, .eval2 = Mode.Specified}).Contents
+        Assert.True(ans5)
+    End Sub
+
     <Fact>
     Sub FormatMethodTest()
         Dim ans1 = "format('{0:#.##}', val)".Executes(New With {.val = 1.2345678}).Contents

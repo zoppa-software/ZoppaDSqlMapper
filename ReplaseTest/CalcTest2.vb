@@ -5,7 +5,6 @@ Imports ZoppaDSqlReplace
 
 Public Class CalcTest2
 
-
     <Fact>
     Public Sub SignChangeTest()
         Dim op1 As New NumberToken.NumberIntegerValueToken(12)

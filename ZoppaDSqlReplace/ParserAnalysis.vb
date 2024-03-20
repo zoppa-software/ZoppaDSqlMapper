@@ -7,6 +7,7 @@ Imports ZoppaDSqlReplace.Express
 Imports ZoppaDSqlReplace.Tokens
 Imports ZoppaDSqlReplace.TokenCollection
 Imports System.Security.Cryptography
+Imports System.Data.Common
 
 ''' <summary>トークンを解析する。</summary>
 Friend Module ParserAnalysis
@@ -509,7 +510,7 @@ Friend Module ParserAnalysis
                 Case GetType(CaseToken)
                     ' 条件を評価して真ならば、ブロックを出力
                     Dim caseans = Executes(DirectCast(tkn.condition, ICommandToken).CommandTokens, parameter)
-                    If caseans.Contents?.Equals(caseVal.Contents) Then
+                    If EqualExpress.ExpressionEqual(caseans, caseVal) Then
                         Dim tkns As New List(Of TokenPosition)(tkn.block)
                         ReplaseQuery(sqlQuery, New TokenStream(tkns), parameter, lclbuf)
                         Exit For

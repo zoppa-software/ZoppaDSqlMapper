@@ -32,22 +32,8 @@ Namespace Express
         ''' <param name="env">環境値情報。</param>
         ''' <returns>実行結果。</returns>
         Public Function Executes(env As IEnvironmentValue) As IToken Implements IExpression.Executes
-            Dim tml = Me.mTml?.Executes(env)
-            Dim tmr = Me.mTmr?.Executes(env)
-
-            Dim nml = TryCast(tml, NumberToken)
-            Dim nmr = TryCast(tmr, NumberToken)
-            Dim bval As Boolean
-            If nml IsNot Nothing AndAlso nmr IsNot Nothing Then
-                ' 数値比較
-                bval = nml.EqualCondition(nmr)
-            ElseIf tml?.Contents Is Nothing AndAlso tmr?.Contents Is Nothing Then
-                ' 両方 Null比較
-                bval = True
-            Else
-                bval = If(tml?.Contents?.Equals(tmr?.Contents), False)
-            End If
-            Return If(bval, CType(FalseToken.Value, IToken), TrueToken.Value)
+            Dim bval = Not EqualExpress.ExpressionEqual(Me.mTml?.Executes(env), Me.mTmr?.Executes(env))
+            Return If(bval, CType(TrueToken.Value, IToken), FalseToken.Value)
         End Function
 
         ''' <summary>文字列条件を取得します。</summary>

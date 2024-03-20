@@ -221,3 +221,354 @@ WHERE
     GRP = 100")
 ```
   
+  
+* **foreach文**  
+パラメータの要素分、出力を繰り返します。  
+`{foreach 一時変数 in パラメータ(配列など)}`、`{end for}`で囲まれた範囲を繰り返します。一時変数に要素が格納されるので foreachの範囲内で置き換え式を使用して出力してください。    
+``` vb
+"SELECT
+    *
+FROM
+    customers 
+WHERE
+    FirstName in ({trim}{foreach nm in names}#{nm}, {end for}{end trim})
+".Replase(New With {.names = New String() {"Helena", "Dan", "Aaron"}})
+```
+上記の例では foreachで囲まれた範囲の文、`#{nm}, `がパラメータ`names`の要素数分("Helena", "Dan", "Aaron")を繰り返して出力します。  
+(お気づきのとおり、最後の要素では`,`が不要に出力されます、この`,`を取り除くのが **trim**文です)  
+出力は以下のとおりです。  
+``` vb
+SELECT
+    *
+FROM
+    customers 
+WHERE
+    FirstName in ('Helena', 'Dan', 'Aaron')
+```
+ただし、このような場合、通常の置き換え式で配列など繰り返し要素を与えれば `,` で結合して置き換えるように実装しています。  
+以下の例は上記と同じ結果を出力します。  
+``` vb
+SELECT
+    *
+FROM
+    customers 
+WHERE
+    FirstName in (#{names})
+".Replase(New With {.names = New String() {"Helena", "Dan", "Aaron"}})
+```
+  
+* **trim文**  
+※ 作成中
+  
+### SQLクエリを実行し、簡単なマッパー機能を使用してインスタンスを生成する
+#### 基本的な使い方
+動的に生成したSQL文をDapperやEntity Frameworkで利用することができます。  
+また、簡単に利用するために [IDbConnection](https://learn.microsoft.com/ja-jp/dotnet/api/system.data.idbconnection)の拡張メソッド、および、シンプルなマッピング処理を用意しています。  
+  
+以下の例は、パラメータの`seachId`が`NULL`以外ならば、`ArtistId`が`seachId`と等しいことという動的SQLを `query`変数に格納しました。
+``` vb
+Dim query = "" &
+"select
+  albumid, title, name
+from
+  albums
+inner join artists on
+  albums.ArtistId = artists.ArtistId
+where
+  {if seachId <> NULL }albums.ArtistId = @seachId{end if}"
+```
+次に、SQLiteの`IDbConnection`の実装である`SQLiteConnection`をOpenした後、`ExecuteRecordsSync`拡張メソッドを実行するとSQLの実行結果が`AlbumInfo`クラスのリストで取得できます。  
+``` vb
+Dim answer As List(Of AlbumInfo)
+Using sqlite As New SQLiteConnection("Data Source=chinook.db")
+    sqlite.Open()
+
+    answer = Await sqlite.ExecuteRecordsSync(Of AlbumInfo)(query, New With {.seachId = 11})
+    ' answerにSQLの実行結果が格納されます
+End Using
+```
+`AlbumInfo`クラスの実装は以下のとおりです。  
+マッピングは一般的にはプロパティ、フィールドをマッピングしますが、ZoppaDSqlはSQLの実行結果の各カラムの型と一致する**コンストラクタ**を検索してインスタンスを生成します。  
+``` vb
+Public Class AlbumInfo
+    Public ReadOnly Property AlbumId As Integer
+    Public ReadOnly Property AlbumTitle As String
+    Public ReadOnly Property ArtistName As String
+
+    Public Sub New(id As Long, title As String, nm As String)
+        Me.AlbumId = id
+        Me.AlbumTitle = title
+        Me.ArtistName = nm
+    End Sub
+End Class
+```
+#### SQL実行設定
+トランザクション、SQLタイムアウトの設定も拡張メソッドで行います。  
+以下はトランザクションの例です。  
+``` vb
+Dim zodiacs = New Zodiac() {
+    New Zodiac("Aries", "牡羊座", New Date(2022, 3, 21), New Date(2022, 4, 19)),
+    New Zodiac("Taurus", "牡牛座", New Date(2022, 4, 20), New Date(2022, 5, 20)),
+    New Zodiac("Gemini", "双子座", New Date(2022, 5, 21), New Date(2022, 6, 21)),
+    New Zodiac("Cancer", "蟹座", New Date(2022, 6, 22), New Date(2022, 7, 22)),
+    New Zodiac("Leo", "獅子座", New Date(2022, 7, 23), New Date(2022, 8, 22)),
+    New Zodiac("Virgo", "乙女座", New Date(2022, 8, 23), New Date(2022, 9, 22)),
+    New Zodiac("Libra", "天秤座", New Date(2022, 9, 23), New Date(2022, 10, 23)),
+    New Zodiac("Scorpio", "蠍座", New Date(2022, 10, 24), New Date(2022, 11, 22)),
+    New Zodiac("Sagittarius", "射手座", New Date(2022, 11, 23), New Date(2022, 12, 21)),
+    New Zodiac("Capricom", "山羊座", New Date(2022, 12, 22), New Date(2023, 1, 19)),
+    New Zodiac("Aquuarius", "水瓶座", New Date(2023, 1, 20), New Date(2023, 2, 18)),
+    New Zodiac("Pisces", "魚座", New Date(2023, 2, 19), New Date(2023, 3, 20))
+}
+
+Dim tran = Me.mSQLite.BeginTransaction()
+Try
+    Me.mSQLite.SetTransaction(tran).ExecuteQuery(
+        "INSERT INTO Zodiac (name, jp_name, from_date, to_date) 
+        VALUES (@Name, @JpName, @FromDate, @ToDate)", Nothing, zodiacs)
+    tran.Commit()
+Catch ex As Exception
+    tran.Rollback()
+End Try
+```
+トランザクションは`IDbConnection`から適切に取得してください。  
+`SetTransaction`という拡張メソッドを用意しているのでトランザクションを与えます、その後はコミット、ロールバックを実行してください。  
+拡張メソッドは以下のものがあります。  
+| メソッド | 内容 |  
+| ---- | ---- | 
+| SetTransaction | トランザクションを設定します。 | 
+| SetTimeoutSecond | SQLタイムアウトを設定します（秒数）、デフォルト値は30秒です。</br>デフォルト値は `ZoppaDSqlSetting.DefaultTimeoutSecond` で変更してください。 | 
+| SetParameterPrepix | SQLパラメータの接頭辞を設定します、デフォルトは `@` です。</br>デフォルト値は `ZoppaDSqlSetting.DefaultParameterPrefix` で変更してください。 | 
+| SetCommandType | SQLのコマンドタイプを設定します、デフォルト値は `CommandType.Text` です。 |
+| SetParameterChecker | SQLパラメータチェック式を設定します。デフォルト値は `Null` です。</br>デフォルトs式は `ZoppaDSqlSetting.DefaultSqlParameterCheck` で変更してください。 |
+| SetOrderName | 指定したプロパティ名の順番でSQLパラメータを作成します。 |
+  
+位置指定パラメータ`?`では名前がないので`SetOrderName`で設定するプロパティの名前を順に設定します。以下は例です、  
+``` vb
+Dim answer = Await Me.mSQLite.
+    SetOrderName("Name").
+    ExecuteTableSync(
+        "select * from Person where name = ?",
+        New With {.Name = "阿部 サダヲ"}
+    )
+```
+### インスタンス生成をカスタマイズします
+検索結果が 多対1 など一つのインスタンスで表現できない場合、インスタンスの生成をカスタマイズする必要があります。  
+ZoppaDSqlではインスタンスを生成する式を引数で与えることで対応します。  
+以下の例では、`Person`テーブルと`Zodiac`テーブルが多対1の関係で、そのまま`Person`クラスと`Zodiac`クラスに展開します。SQLの実行結果 1レコードで 1つの`Person`クラスを生成し、リレーションキーで`Zodiac`クラスをコレクションに保持して、関連を表現する`Persons`プロパティに追加します。
+``` vb
+Dim ansZodiacs = Me.mSQLite.ExecuteCreateRecords(Of Zodiac)(
+    "select " &
+    "  Person.Name, Person.birth_day, Zodiac.name, Zodiac.jp_name, Zodiac.from_date, Zodiac.to_date " &
+    "from Person " &
+    "left outer join Zodiac on " &
+    "  Person.zodiac = Zodiac.name",
+    Function(prm) ' Zodiacの主キーを返す
+        Return {prm(2)}
+    End Function,
+    Sub(zdic, prm)
+        ' 上記主キーで登録済みのZodiacとSQLの取得結果からインスタンスを生成
+        Dim pson = New Person(prm(0).ToString(), prm(2).ToString(), CDate(prm(1)))
+        zdic.Persons.Add(pson)
+    End Sub,
+    Function(prm) As Zodiac
+        ' 上記主キーで登録済みのZodiacがないので、SQLの取得結果のみでインスタンスを生成
+        Dim pson = New Person(prm(0).ToString(), prm(2).ToString(), CDate(prm(1)))
+        Dim zdic = New Zodiac(prm(2).ToString(), prm(3).ToString(), CDate(prm(4)), CDate(prm(5)))
+        zdic.Persons.Add(pson)
+        Return zdic
+    End Function
+)
+```
+  
+### パラメータにCSVファイルを与えてSQLクエリを実行します
+単体テストなど大量データのインサート用にCSVファイルから直接パラメータ値を取得する仕組みを用意しました。  
+以下の例を参照してください。  
+``` vb
+Using sr As New CsvReaderStream("Sample.csv")
+    Using tran = sqlite.BeginTransaction()
+        ' 実行するSQL文
+        Dim query = "insert into SampleDB (indexno, name) values (@indexno, @name)"
+
+        ' CSVファイルの各列の型を保持するbuilderを生成
+        Dim builder As New CsvParameterBuilder()
+        builder.Add("indexno", CsvType.CsvInteger)
+        builder.Add("name", CsvType.CsvString)
+
+        ' CSVストリームとbuilderをパラメータに与えて実行
+        ' ※ 非同期実行するとファイルが先にCloseされるため同期実行します
+        sqlite.SetTransaction(tran).ExecuteQuery(query, sr, builder)
+
+        tran.Commit()
+    End Using
+End Using
+```
+  
+### 実行結果をDataTable、または DynamicObjectで取得します
+SQLを実行した結果を取得するためだけにクラスを定義するとクラスの数が増えて管理するのも大変になることもあります。そのため、`DataTable`型、または動的な型（`DynamicObject`）で取得するメソッドを用意しました。  
+  
+`DataTable`型で取得する例は以下のようになります。  
+Rowsプロパティなど使用して実行結果を取得してください。  
+``` vb
+Dim tbl = Await Me.mSQLite.ExecuteTableSync(
+    "select * from Person where zodiac = @Zodiac",
+    New With {.Zodiac = "Aries"}
+)
+```
+  
+動的な型（`DynamicObject`）で取得する例は以下のようになります。  
+(C#では`dynamic`キーワードで動的な型を宣言します。vb.netでは`Object`です。この例ではわかりやすいようにC#で記述しています)  
+``` csharp
+using (var sqlite = new SQLiteConnection("Data Source=chinook.db")) {
+    sqlite.Open();
+
+    var query = 
+@"select
+  albumid, title, name
+from
+  albums
+inner join artists on
+  albums.ArtistId = artists.ArtistId
+{trim}
+where
+  {if seachId <> NULL }albums.ArtistId = @seachId{end if}
+{end trim}";
+
+    var ans = sqlite.ExecuteObject(query, new { seachId = 11 });
+    foreach (dynamic v in ans) {
+        Console.WriteLine("AlbumId={0}, AlbumTitle={1}, ArtistName={2}", v.albumid, v.title, v.name);
+    }
+}
+```
+実行結果を受け取る`foreach`処理で実行結果は`dynamic`で受け取っています。albumid、title、nameは`dynamic`型のメンバーではないですが、`ZoppaDSql`内でselect実行結果の列名から動的に追加したものになり、取得することができます。  
+※ 動的な型を使用すると記述は簡潔になりますがメンテナンス性は悪くなると考えられます。使用には注意してください
+  
+### ログファイル出力機能を有効にします
+※ 作成中
+
+### 付属機能
+#### 簡単な式を評価し、結果を得ることができます
+``` vb
+' 数式
+Dim ans1 = "(28 - 3) / (2 + 3)".Executes().Contents
+Assert.Equal(ans1, 5)
+
+' 比較式
+Dim ans2 = "0.1 * 5 <= 0.4".Executes().Contents
+Assert.Equal(ans2, False)
+```
+#### カンマ区切りで文字列を分割できます
+`"`のエスケープを考慮して文字列を区切ります。分割した文字列は`CsvItem`構造体に格納されます。`Text`プロパティではエスケープは解除されませんが、`UnEscape`メソッドではエスケープを解除します。  
+``` vb
+Dim csv = CsvSpliter.CreateSpliter("あ,い,う,え,""お,を""").Split()
+Assert.Equal(csv(0).UnEscape(), "あ")
+Assert.Equal(csv(1).UnEscape(), "い")
+Assert.Equal(csv(2).UnEscape(), "う")
+Assert.Equal(csv(3).UnEscape(), "え")
+Assert.Equal(csv(4).UnEscape(), "お,を")
+Assert.Equal(csv(4).Text, """お,を""")
+```
+#### CSVファイルを読み込みます
+* ストリーム、イテレータを使用して読み込みます
+基本的な使い方はストリームを用意し、イテレータを使用して読み込みます。
+``` vb
+Using sr As New CsvReaderStream("CsvFiles\Sample3.csv", Encoding.GetEncoding("shift_jis"))
+    For Each pointer In sr
+        Console.Out.WriteLine($"{pointer.Items(0).UnEscape()}, {pointer.Items(1).UnEscape()}, …")
+    Next
+End Using
+```
+ストリームクラスは`IEnumerable`インターフェイスを実装しているため一行の情報を`CsvReaderStream.Pointer`構造体で取得できます。  
+読み込んだ行番号(`Row`プロパティ)と各項目の情報(`Items`プロパティ、`CsvItem`構造体のリスト)を持っているため参照します。  
+
+* 条件を指定して読み込みます
+`WhereCsv`メソッドを使用すると二つの式を与えてCSVの情報をインスタンスに変換できます。  
+    * 一つ目の式は対象の行を決定するための式です  
+    * 二つ目の式はインスタンスを生成して返します  
+
+以下の例では、一つ目の式にヘッダ行を除くため2行目以降（`row >= 1`）を指定し、二つ目の式は`Sample1Csv`のインスタンスを生成します。  
+``` vb
+Dim ans As New List(Of Sample1Csv)()
+Using sr As New CsvReaderStream("CsvFiles\Sample1.csv", Encoding.GetEncoding("shift_jis"))
+ans = sr.WhereCsv(Of Sample1Csv)(
+    Function(row, item) row >= 1,
+    Function(row, item) New Sample1Csv(item(0).UnEscape(), item(1).UnEscape(), item(2).UnEscape())
+).ToList()
+End Using
+```
+
+``` vb
+Class Sample1Csv
+    Public ReadOnly Property Item1 As String
+    Public ReadOnly Property Item2 As String
+    Public ReadOnly Property Item3 As String
+
+    Public Sub New(s1 As String, s2 As String, s3 As String)
+        Me.Item1 = s1
+        Me.Item2 = s2
+        Me.Item3 = s3
+    End Sub
+End Class
+```
+`ICsvType`インターフェイスを実装したインスタンスを与えることで、インスタンスを生成するコンストラクタを指定できます。  
+以下の例では`String`型の引数を3つ持つコンストラクタを利用してインスタンスを生成します。
+``` vb
+Dim ans As New List(Of Sample1Csv)()
+Using sr As New CsvReaderStream("CsvFiles\Sample1.csv", Encoding.GetEncoding("shift_jis"))
+ans = sr.WhereCsv(Of Sample1Csv)(
+    Function(row, item) row >= 1,
+    CsvType.CsvString, CsvType.CsvString, CsvType.CsvString
+).ToList()
+End Using
+```
+
+## 注意
+Oracle DB を対象にマッパー機能でSQLパラメーターを与えるとき、ODP.NET, Managed Driver の OracleParameter の以下の仕様から日本語の検索が正しくできないと思われます。  
+> OracleParameter.DbType に DbType.String を設定した場合、OracleDbType には OracleDbType.Varchar2 が設定されます  
+> *OracleDbType.NVarchar2 ではありません*  
+
+上記の仕様が問題になる可能性があるので、`IDbDataParameter` を使用前にチェックする式を設定する機能を追加しました。  
+以下の例をご覧ください。  
+``` vb
+Using ora As New OracleConnection()
+    ora.ConnectionString = "接続文字列"
+    ora.Open()
+
+    Dim tbl = ora.
+        SetParameterPrepix(PrefixType.Colon).
+        SetParameterChecker(
+            Sub(chk)
+                Dim prm = TryCast(chk, Oracle.ManagedDataAccess.Client.OracleParameter)
+                If prm?.OracleDbType = OracleDbType.Varchar2 Then
+                    prm.OracleDbType = OracleDbType.NVarchar2
+                End If
+            End Sub).
+        ExecuteRecords(Of RFLVGROUP)(
+            "select * from GROUP where SYAIN_NO = :SyNo ",
+            New With {.SyNo = CType("105055", DbString)}
+        )
+End Using
+```
+拡張メソッド `SetParameterChecker` では生成した `IDbDataParameter` を順次引き渡すので、`OracleDbType` を式内で変更しています。
+全てのSQLに適用したい場合はデフォルトの式を変更します。  
+``` vb
+ZoppaDSqlSetting.DefaultSqlParameterCheck =
+    Sub(chk)
+        Dim prm = TryCast(chk, Oracle.ManagedDataAccess.Client.OracleParameter)
+        If prm?.OracleDbType = OracleDbType.Varchar2 Then
+            prm.OracleDbType = OracleDbType.NVarchar2
+        End If
+    End Sub
+```
+  
+## インストール
+ソースをビルドして `ZoppaDSql.dll` ファイルを生成して参照してください。  
+Nugetにライブラリを公開しています。[ZoppaDSql](https://www.nuget.org/packages/ZoppaDSql/)を参照してください。
+
+## 作成情報
+* 造田　崇（zoppa software）
+* ミウラ第1システムカンパニー 
+* takashi.zouta@kkmiuta.jp
+
+## ライセンス
+[apache 2.0](https://www.apache.org/licenses/LICENSE-2.0.html)

@@ -174,7 +174,7 @@ PRIMARY KEY(name)
             "from Person " &
             "left outer join Zodiac on " &
             "  Person.zodiac = Zodiac.name",
-            Function(prm)
+            Function(prm) ' Zodiacの主キーを返す
                 Return {prm(2)}
             End Function,
             Sub(zdic, prm)

@@ -382,26 +382,20 @@ Dim ansZodiacs = Me.mSQLite.ExecuteCreateRecords(Of Zodiac)(
 ```
   
 ### パラメータにCSVファイルを与えてSQLクエリを実行します
-単体テストなど大量データのインサート用にCSVファイルから直接パラメータ値を取得する仕組みを用意しました。  
+単体テストなど大量データのインサートにはCSVファイルを読み込むライブラリを使用してインサートします。  
 以下の例を参照してください。  
-``` vb
-Using sr As New CsvReaderStream("Sample.csv")
-    Using tran = sqlite.BeginTransaction()
-        ' 実行するSQL文
-        Dim query = "insert into SampleDB (indexno, name) values (@indexno, @name)"
+``` csharp
+using (var tran = sqlite.BeginTransaction()) {
+    sqlite.SetTransaction(tran);
 
-        ' CSVファイルの各列の型を保持するbuilderを生成
-        Dim builder As New CsvParameterBuilder()
-        builder.Add("indexno", CsvType.CsvInteger)
-        builder.Add("name", CsvType.CsvString)
+    using (var cr = new ZoppaLegacyFiles.Csv.CsvStreamReader("sample.csv")) {
+        sqlite.ExecuteQuery<CsvData>("INSERT INTO SampleDB (indexno, name) VALUES (@Indexno, @Name)", cr);
+    }
 
-        ' CSVストリームとbuilderをパラメータに与えて実行
-        ' ※ 非同期実行するとファイルが先にCloseされるため同期実行します
-        sqlite.SetTransaction(tran).ExecuteQuery(query, sr, builder)
+    tran.Commit();
+}
 
-        tran.Commit()
-    End Using
-End Using
+record class CsvData(long Indexno, string Name);
 ```
   
 ### 実行結果をDataTable、または DynamicObjectで取得します
@@ -467,59 +461,6 @@ Assert.Equal(csv(2).UnEscape(), "う")
 Assert.Equal(csv(3).UnEscape(), "え")
 Assert.Equal(csv(4).UnEscape(), "お,を")
 Assert.Equal(csv(4).Text, """お,を""")
-```
-#### CSVファイルを読み込みます
-* ストリーム、イテレータを使用して読み込みます
-基本的な使い方はストリームを用意し、イテレータを使用して読み込みます。
-``` vb
-Using sr As New CsvReaderStream("CsvFiles\Sample3.csv", Encoding.GetEncoding("shift_jis"))
-    For Each pointer In sr
-        Console.Out.WriteLine($"{pointer.Items(0).UnEscape()}, {pointer.Items(1).UnEscape()}, …")
-    Next
-End Using
-```
-ストリームクラスは`IEnumerable`インターフェイスを実装しているため一行の情報を`CsvReaderStream.Pointer`構造体で取得できます。  
-読み込んだ行番号(`Row`プロパティ)と各項目の情報(`Items`プロパティ、`CsvItem`構造体のリスト)を持っているため参照します。  
-
-* 条件を指定して読み込みます
-`WhereCsv`メソッドを使用すると二つの式を与えてCSVの情報をインスタンスに変換できます。  
-    * 一つ目の式は対象の行を決定するための式です  
-    * 二つ目の式はインスタンスを生成して返します  
-
-以下の例では、一つ目の式にヘッダ行を除くため2行目以降（`row >= 1`）を指定し、二つ目の式は`Sample1Csv`のインスタンスを生成します。  
-``` vb
-Dim ans As New List(Of Sample1Csv)()
-Using sr As New CsvReaderStream("CsvFiles\Sample1.csv", Encoding.GetEncoding("shift_jis"))
-ans = sr.WhereCsv(Of Sample1Csv)(
-    Function(row, item) row >= 1,
-    Function(row, item) New Sample1Csv(item(0).UnEscape(), item(1).UnEscape(), item(2).UnEscape())
-).ToList()
-End Using
-```
-
-``` vb
-Class Sample1Csv
-    Public ReadOnly Property Item1 As String
-    Public ReadOnly Property Item2 As String
-    Public ReadOnly Property Item3 As String
-
-    Public Sub New(s1 As String, s2 As String, s3 As String)
-        Me.Item1 = s1
-        Me.Item2 = s2
-        Me.Item3 = s3
-    End Sub
-End Class
-```
-`ICsvType`インターフェイスを実装したインスタンスを与えることで、インスタンスを生成するコンストラクタを指定できます。  
-以下の例では`String`型の引数を3つ持つコンストラクタを利用してインスタンスを生成します。
-``` vb
-Dim ans As New List(Of Sample1Csv)()
-Using sr As New CsvReaderStream("CsvFiles\Sample1.csv", Encoding.GetEncoding("shift_jis"))
-ans = sr.WhereCsv(Of Sample1Csv)(
-    Function(row, item) row >= 1,
-    CsvType.CsvString, CsvType.CsvString, CsvType.CsvString
-).ToList()
-End Using
 ```
 
 ## 注意

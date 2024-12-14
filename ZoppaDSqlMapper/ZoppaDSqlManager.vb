@@ -385,16 +385,16 @@ Public Module ZoppaDSqlManager
         Next
     End Sub
 
-    ''' <summary>DBNullを見つけたら nullに変更します。</summary>
-    ''' <param name="fields">チェック対象の配列。</param>
-    ''' <param name="allowNul">DBNullを許容している列リスト。</param>
-    Private Sub ChangeDBNull(fields As Object(), allowNul As List(Of Integer))
-        For Each i In allowNul
-            If TypeOf fields(i) Is DBNull Then
-                fields(i) = Nothing
-            End If
-        Next
-    End Sub
+    '''' <summary>DBNullを見つけたら nullに変更します。</summary>
+    '''' <param name="fields">チェック対象の配列。</param>
+    '''' <param name="allowNul">DBNullを許容している列リスト。</param>
+    'Private Sub ChangeDBNull(fields As Object(), allowNul As List(Of Integer))
+    '    For Each i In allowNul
+    '        If TypeOf fields(i) Is DBNull Then
+    '            fields(i) = Nothing
+    '        End If
+    '    Next
+    'End Sub
 
 #End Region
 
@@ -464,7 +464,7 @@ Public Module ZoppaDSqlManager
                             Dim fields = New Object(reader.FieldCount - 1) {}
                             Do While reader.Read()
                                 If reader.GetValues(fields) >= reader.FieldCount Then
-                                    ChangeDBNull(fields, allowNull)
+                                    ChangeDBNull(fields)
                                     recoreds.Add(CType(constructor.Invoke(fields), T))
                                 End If
                             Loop

@@ -151,7 +151,7 @@ Public NotInheritable Class ZoppaLoggingLogger
             Get
                 Dim res As String = ""
                 For Each s In Me.Scopes
-                    res &= $"|{s.ScopeName}"
+                    res &= $"|{If(s?.ScopeName, "<null>")}"
                 Next
                 Return res
             End Get
